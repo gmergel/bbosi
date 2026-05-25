@@ -1,0 +1,128 @@
+<div class="home">
+  <!-- Opcoes vendidas -->
+  @if (soldOptionsService.soldOptions().length > 0) {
+    <section class="section sold-section">
+      <h2 class="section__title">
+        <mat-icon>assignment_turned_in</mat-icon>
+        Minhas Vendas
+      </h2>
+      <div class="sold-grid">
+        @for (sold of soldOptionsService.soldOptions(); track sold.optionTicker) {
+          <div class="sold-card glass"
+               [class.sold-card--safe]="getCardStatus(sold) === 'safe'"
+               [class.sold-card--recomprar]="getCardStatus(sold) === 'recomprar'"
+               [class.sold-card--rolar]="getCardStatus(sold) === 'rolar'"
+               >
+
+            <!-- Header: logo + ticker + contexto compacto -->
+            <div class="sold-card__header">
+              <img class="sold-card__logo"
+                   [src]="'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + sold.stockTicker + '.png'"
+                   [alt]="sold.stockTicker"
+                   (error)="$event.target.src='https://ui-avatars.com/api/?name=' + sold.stockTicker + '&background=1a2733&color=4fd1c5&size=40&bold=true'"
+              />
+              <div class="sold-card__titles">
+                <span class="sold-card__ticker">{{ sold.optionTicker }}</span>
+                <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ sold.sellPrice.toFixed(2) }}</span>
+              </div>
+              <div class="sold-card__nv" [class.text-green]="sold.nv > 0" [class.text-red]="sold.nv <= 0"
+                   matTooltip="NV (Não Venda)">
+                <span class="sold-card__nv-label">NV</span>
+                <span class="sold-card__nv-value">{{ sold.nv.toFixed(2) }}</span>
+              </div>
+              <button mat-icon-button class="sold-card__remove"
+                      (click)="removeSold(sold.optionTicker, $event)"
+                      matTooltip="Remover">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Alerta de ação (só quando necessário) -->
+            @if (getCardStatus(sold) !== 'safe') {
+              <div class="sold-card__alert"
+                   [class.alert--recomprar]="getCardStatus(sold) === 'recomprar'"
+                   [class.alert--rolar]="getCardStatus(sold) === 'rolar'">
+                @if (getCardStatus(sold) === 'recomprar') {
+                  <mat-icon>warning</mat-icon>
+                  <span>NV zerou — <strong>recomprar</strong></span>
+                } @else {
+                  <mat-icon>sync</mat-icon>
+                  <span>BBOSI atingiu strike — <strong>rolar</strong></span>
+                }
+              </div>
+            }
+
+            <!-- Barra visual: BBOSI / Cotação / Strike -->
+            <div class="sold-card__bar-section">
+              <div class="bar-scale">
+                <div class="bar-scale__track">
+                  <div class="bar-scale__fill"
+                       [style.width.%]="getMarkerPosition(sold.bbosi || 0, sold)"
+                       [class.bar--safe]="(sold.bbosi || 0) < sold.strike * 0.90"
+                       [class.bar--warn]="(sold.bbosi || 0) >= sold.strike * 0.90 && (sold.bbosi || 0) < sold.strike"
+                       [class.bar--danger]="(sold.bbosi || 0) >= sold.strike">
+                  </div>
+                  <div class="bar-scale__marker bar-scale__marker--price"
+                       [style.left.%]="getMarkerPosition(sold.stockPrice, sold)"
+                       matTooltip="Cotação R${{ sold.stockPrice.toFixed(2) }}">
+                  </div>
+                  <div class="bar-scale__marker bar-scale__marker--bbosi"
+                       [style.left.%]="getMarkerPosition(sold.bbosi || 0, sold)"
+                       matTooltip="BBOSI R${{ (sold.bbosi || 0).toFixed(2) }}">
+                  </div>
+                  <div class="bar-scale__marker bar-scale__marker--strike"
+                       style="left: 100%"
+                       matTooltip="Strike R${{ sold.strike.toFixed(2) }}">
+                  </div>
+                </div>
+                <div class="bar-scale__labels bar-scale__labels--three">
+                  @for (item of getBarLabels(sold); track item.type) {
+                    <span [class]="'label--' + item.type">{{ item.label }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Alvo de lucro -->
+            <div class="sold-card__target">
+              <span class="sold-card__target-label">Alvo recompra</span>
+              <span class="sold-card__target-value">R${{ getTarget(sold).toFixed(2) }}</span>
+              <span class="sold-card__target-gain">(lucro 80%)</span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Stock Cards -->
+  <section class="section">
+    <h2 class="section__title">
+      <mat-icon>trending_up</mat-icon>
+      Acoes
+    </h2>
+    <div class="stocks-grid">
+      @for (stock of stocks(); track stock.ticker) {
+        <div class="stock-card glass" (click)="selectStock(stock.ticker)">
+          <img class="stock-card__logo"
+               [src]="'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + stock.ticker + '.png'"
+               [alt]="stock.ticker"
+               (error)="$event.target.src='https://ui-avatars.com/api/?name=' + stock.ticker + '&background=1a2733&color=4fd1c5&size=80&bold=true'"
+          />
+          <div class="stock-card__info">
+            <span class="stock-card__ticker">{{ stock.ticker }}</span>
+            <span class="stock-card__name">{{ stock.name }}</span>
+          </div>
+          <div class="stock-card__price">
+            @if (stock.price > 0) {
+              <span class="stock-card__value">R$ {{ stock.price.toFixed(2) }}</span>
+            } @else {
+              <span class="stock-card__loading">--</span>
+            }
+          </div>
+          <mat-icon class="stock-card__arrow">chevron_right</mat-icon>
+        </div>
+      }
+    </div>
+  </section>
+</div>

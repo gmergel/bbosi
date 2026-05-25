@@ -1,0 +1,207 @@
+<div class="options-container">
+  <!-- Header compacto -->
+  <header class="options-header">
+    <button mat-icon-button (click)="goBack()" aria-label="Voltar">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <img class="header-logo"
+         [src]="'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + stock()?.ticker + '.png'"
+         [alt]="stock()?.ticker"
+         (error)="$event.target.src='https://ui-avatars.com/api/?name=' + stock()?.ticker + '&background=1a2733&color=4fd1c5&size=80&bold=true'"
+    />
+    <div class="header-info">
+      <h1>{{ stock()?.ticker }}</h1>
+      <span class="header-company">{{ stock()?.name }}</span>
+    </div>
+    <div class="header-metrics">
+      <div class="metric">
+        <span class="metric-label">Preco</span>
+        <span class="metric-value">R$ {{ stock()?.price?.toFixed(2) }}</span>
+      </div>
+      <div class="metric metric--highlight">
+        <span class="metric-label">BBOSI</span>
+        <span class="metric-value">R$ {{ bbosi().toFixed(2) }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p>Carregando opcoes...</p>
+    </div>
+  }
+
+  @if (!loading() && isMock()) {
+    <div class="mock-banner">
+      <mat-icon>info</mat-icon>
+      <span>Dados simulados — mercado fechado ou sem resposta do opcoes.net.br. Dados reais disponiveis em dias uteis das 10h as 17h.</span>
+    </div>
+  }
+
+  @if (!loading() && allOptions().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-state__icon">schedule</mat-icon>
+      <h2>Dados indisponiveis</h2>
+      <p>O opcoes.net.br so fornece dados durante o pregao da B3 (10h-17h).</p>
+      <p class="empty-state__hint">Acesse durante o horario de mercado para carregar os dados. Apos a primeira carga, eles ficam disponiveis em cache.</p>
+    </div>
+  }
+
+  @if (!loading() && allOptions().length > 0) {
+    <!-- Card destaque: melhor opcao -->
+    @if (bestOption(); as best) {
+      <section class="best-pick">
+        <div class="best-pick__badge">
+          <mat-icon>star</mat-icon>
+          <span>Melhor oportunidade</span>
+        </div>
+        <div class="best-pick__content">
+          <div class="best-pick__ticker">{{ best.ticker }}</div>
+          <div class="best-pick__details">
+            <span>Strike <strong>R$ {{ best.strike.toFixed(2) }}</strong></span>
+            <span>VE <strong>R$ {{ best.ve.toFixed(2) }}</strong></span>
+            <span>Lastro <strong>{{ best.lastroPercent.toFixed(1) }}%</strong></span>
+            <span>Taxa <strong>{{ best.taxaAnual.toFixed(1) }}% a.a.</strong></span>
+            <span>VDXX <strong>{{ best.vdxx.toFixed(1) }}</strong></span>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Controles -->
+    <div class="table-controls">
+      <mat-slide-toggle [checked]="showNoSell()" (change)="showNoSell.set($event.checked)">
+        Mostrar "Nao Venda"
+      </mat-slide-toggle>
+      <span class="options-count">{{ options().length }} opcoes</span>
+    </div>
+
+    <!-- Tabela principal: limpa e focada -->
+    <div class="table-wrapper">
+      @for (option of options(); track option.ticker; let i = $index) {
+        <div class="option-row" [class.option-row--no-sell]="option.noSell"
+             [class.option-row--expanded]="expandedRow() === option.ticker"
+             (click)="toggleRow(option.ticker)">
+
+          <!-- Linha principal -->
+          <div class="option-row__main">
+            <span class="option-row__rank" [class]="getVdxxClass(option.vdxx)">{{ i + 1 }}</span>
+
+            <div class="option-row__info">
+              <span class="option-row__ticker">{{ option.ticker }}</span>
+              <span class="option-row__sub">Strike R$ {{ option.strike.toFixed(2) }} &middot; {{ option.tradingDays }}d</span>
+            </div>
+
+            <div class="option-row__metrics">
+              <div class="option-row__metric">
+                <span class="metric-sm-label">Lastro</span>
+                <span class="metric-sm-value">{{ option.lastroPercent.toFixed(1) }}%</span>
+              </div>
+              <div class="option-row__metric">
+                <span class="metric-sm-label">Taxa a.a.</span>
+                <span class="metric-sm-value">{{ option.taxaAnual.toFixed(1) }}%</span>
+              </div>
+            </div>
+
+            <div class="option-row__vdxx">
+              <div class="vdxx-bar-container">
+                <div class="vdxx-bar" [class]="getVdxxClass(option.vdxx)"
+                     [style.width.%]="getVdxxBarWidth(option.vdxx)"></div>
+              </div>
+              <span class="vdxx-value" [class]="getVdxxClass(option.vdxx)">{{ option.vdxx.toFixed(1) }}</span>
+            </div>
+
+            @if (option.noSell) {
+              <mat-icon class="no-sell-badge" [matTooltip]="option.noSellReason">block</mat-icon>
+            }
+          </div>
+
+          <!-- Detalhes expandidos -->
+          @if (expandedRow() === option.ticker) {
+            <div class="option-row__details">
+              @if (option.noSell) {
+                <div class="no-sell-reason">
+                  <mat-icon>warning</mat-icon>
+                  <span>{{ option.noSellReason }}</span>
+                </div>
+              }
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <span class="detail-label">Cotacao</span>
+                  <span class="detail-value">R$ {{ option.price.toFixed(2) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Taxa a.a.</span>
+                  <span class="detail-value" [class.text-success]="option.taxaAnual >= 12" [class.text-danger]="option.taxaAnual < 6">{{ option.taxaAnual.toFixed(1) }}%</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">NV</span>
+                  <span class="detail-value" [class.text-danger]="option.nv < 0">{{ option.nv.toFixed(4) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Delta</span>
+                  <span class="detail-value">{{ option.delta.toFixed(4) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Gama</span>
+                  <span class="detail-value">{{ option.gama.toFixed(4) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Theta</span>
+                  <span class="detail-value">{{ option.theta.toFixed(4) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">IV</span>
+                  <span class="detail-value">{{ (option.impliedVol * 100).toFixed(1) }}%</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Premio/Acao</span>
+                  <span class="detail-value">{{ option.premiumPercent.toFixed(2) }}%</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">VDX</span>
+                  <span class="detail-value">{{ option.vdx.toFixed(2) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">BOSI</span>
+                  <span class="detail-value">{{ option.bosi.toFixed(2) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Neg%</span>
+                  <span class="detail-value">{{ option.tradePercent.toFixed(2) }}%</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Vencimento</span>
+                  <span class="detail-value">{{ option.expiration | date:'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+              <div class="detail-actions">
+                @if (!option.noSell) {
+                  @if (!isSold(option.ticker)) {
+                    <button mat-flat-button color="primary" (click)="sellOption(option, $event)">
+                      <mat-icon>sell</mat-icon>
+                      VENDA
+                    </button>
+                  } @else {
+                    <button mat-stroked-button color="warn" (click)="unsellOption(option.ticker, $event)">
+                      <mat-icon>undo</mat-icon>
+                      Desfazer venda
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Fontes dos dados -->
+    <footer class="data-sources">
+      <mat-icon>source</mat-icon>
+      <span>Cotacao: Yahoo Finance &middot; Opcoes e gregas: opcoes.net.br &middot; Regras: Bastter.com</span>
+    </footer>
+  }
+</div>

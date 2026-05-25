@@ -1,0 +1,62 @@
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        theme-type: dark,
+        primary: mat.$green-palette,
+        tertiary: mat.$yellow-palette,
+      ),
+      typography: Inter,
+      density: 0,
+    )
+  );
+
+  // Custom dark palette
+  --mat-sys-primary: #4fd1c5;
+  --mat-sys-on-primary: #003733;
+  --mat-sys-primary-container: #00504b;
+  --mat-sys-on-primary-container: #b2dfdb;
+  --mat-sys-secondary: #ffd54f;
+  --mat-sys-on-secondary: #212121;
+  --mat-sys-surface: #0f1923;
+  --mat-sys-on-surface: #e8eaed;
+  --mat-sys-on-surface-variant: #9aa0a6;
+  --mat-sys-surface-container: #1a2733;
+  --mat-sys-surface-container-low: #141e28;
+  --mat-sys-surface-container-highest: #243341;
+  --mat-sys-outline-variant: #3c4a57;
+  --mat-sys-error: #ff6b6b;
+}
+
+body {
+  color-scheme: dark;
+  background: linear-gradient(135deg, #0a1628 0%, #0f1923 50%, #0d1b2a 100%);
+  color: var(--mat-sys-on-surface);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+// Glassmorphism utility
+.glass {
+  background: rgba(26, 39, 51, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 209, 197, 0.1);
+}
+
+// Gradient text utility
+.gradient-text {
+  background: linear-gradient(135deg, #4fd1c5, #38b2ac);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
