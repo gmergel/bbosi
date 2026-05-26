@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, forkJoin, of, catchError, switchMap } from 'rxjs';
 import { Stock, OptionData } from '../models/stock.model';
 import { MockDataService } from './mock-data.service';
+import { environment } from '../../environments/environment';
 
 export interface OptionsChainResponse {
   success: boolean;
@@ -59,7 +60,7 @@ export class MarketDataService {
     const yahooTicker = `${ticker}.SA`;
 
     return this.http
-      .get<any>(`/api/yahoo/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
+      .get<any>(`${environment.yahooBaseUrl}/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
@@ -96,7 +97,7 @@ export class MarketDataService {
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
     const z = Math.floor(Date.now() / 10000);
-    const url = `/api/opcoes/api/v1?z=${z}&r0t=OptionsChain&r0p.underlying_asset_id=${ticker}`;
+    const url = `${environment.opcoesBaseUrl}/api/v1?z=${z}&r0t=OptionsChain&r0p.underlying_asset_id=${ticker}`;
 
     return this.http.get<OptionsChainResponse>(url).pipe(
       map(res => this.parseOptionsChain(res, ticker)),
@@ -160,7 +161,7 @@ export class MarketDataService {
 
     const yahooTicker = `${ticker}.SA`;
     const priceSource$ = this.http
-      .get<any>(`/api/yahoo/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
+      .get<any>(`${environment.yahooBaseUrl}/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
