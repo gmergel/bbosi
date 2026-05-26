@@ -42,6 +42,7 @@ export class MarketDataService {
   private stocks: Stock[] = [
     { ticker: 'BBAS3', name: 'Banco do Brasil', price: 0 },
     { ticker: 'BBDC4', name: 'Bradesco', price: 0 },
+    { ticker: 'BBSE3', name: 'BB Seguridade', price: 0 },
     { ticker: 'PETR4', name: 'Petrobras', price: 0 },
     { ticker: 'VALE3', name: 'Vale', price: 0 },
   ];
@@ -54,7 +55,7 @@ export class MarketDataService {
    * Busca cotação atual da ação via Yahoo Finance.
    * Fallback: infere das opções (opcoes.net.br) ou usa cache.
    */
-  fetchStockPrice(ticker: string): Observable<number> {
+  fetchStockPrice(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
     const yahooTicker = `${ticker}.SA`;
 
     return this.http
@@ -62,13 +63,17 @@ export class MarketDataService {
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
-          return meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
+          const price = meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
+          const marketTime = meta?.regularMarketTime
+            ? new Date(meta.regularMarketTime * 1000)
+            : null;
+          return { price, marketTime };
         }),
-        catchError(() => of(0)),
-        switchMap(price => {
-          if (price > 0) {
-            this.cachePrice(ticker, price);
-            return of(price);
+        catchError(() => of({ price: 0, marketTime: null as Date | null })),
+        switchMap(data => {
+          if (data.price > 0) {
+            this.cachePrice(ticker, data.price);
+            return of(data);
           }
           // Fallback: infere das opções
           return this.fetchOptions(ticker).pipe(
@@ -76,9 +81,9 @@ export class MarketDataService {
               const inferred = this.inferPriceFromOptions(options);
               if (inferred > 0) {
                 this.cachePrice(ticker, inferred);
-                return inferred;
+                return { price: inferred, marketTime: null as Date | null };
               }
-              return this.getCachedPrice(ticker);
+              return { price: this.getCachedPrice(ticker), marketTime: null as Date | null };
             })
           );
         })
@@ -146,7 +151,7 @@ export class MarketDataService {
   /**
    * Busca cotação + opções em paralelo
    */
-  fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; isMock: boolean }> {
+  fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; isMock: boolean; timestamp: Date }> {
     const stock = this.stocks.find(s => s.ticker === ticker) || {
       ticker,
       name: ticker,
@@ -159,16 +164,23 @@ export class MarketDataService {
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
-          return meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
+          const price = meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
+          const marketTime = meta?.regularMarketTime
+            ? new Date(meta.regularMarketTime * 1000)
+            : null;
+          return { price, marketTime };
         }),
-        catchError(() => of(0))
+        catchError(() => of({ price: 0, marketTime: null as Date | null }))
       );
 
     return forkJoin({
-      price: priceSource$,
+      priceData: priceSource$,
       options: this.fetchOptions(ticker),
     }).pipe(
-      map(({ price, options }) => {
+      map(({ priceData, options }) => {
+        let price = priceData.price;
+        const timestamp = priceData.marketTime || new Date();
+
         // Se não conseguiu preço de nenhuma fonte, infere pelas opções
         if (price === 0 && options.length > 0) {
           price = this.inferPriceFromOptions(options);
@@ -189,6 +201,7 @@ export class MarketDataService {
             stock: { ...stock, price },
             options: mockData,
             isMock: true,
+            timestamp,
           };
         }
 
@@ -196,6 +209,7 @@ export class MarketDataService {
           stock: { ...stock, price },
           options,
           isMock: false,
+          timestamp,
         };
       })
     );

@@ -1,5 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { OptionIndicators } from '../models/stock.model';
+import { MarketDataService } from './market-data.service';
+import { IndicatorService } from './indicator.service';
+import { forkJoin } from 'rxjs';
 
 export interface SoldOption {
   optionTicker: string;
@@ -15,12 +18,15 @@ export interface SoldOption {
   lastroPercent: number;
   bbosi: number;
   stockPrice: number;
+  lastRefresh?: string;
 }
 
 const STORAGE_KEY = 'bbosi-sold-options';
 
 @Injectable({ providedIn: 'root' })
 export class SoldOptionsService {
+  private marketData = inject(MarketDataService);
+  private indicatorService = inject(IndicatorService);
   private _soldOptions = signal<SoldOption[]>(this.loadFromStorage());
 
   readonly soldOptions = this._soldOptions.asReadonly();
@@ -40,6 +46,7 @@ export class SoldOptionsService {
       lastroPercent: option.lastroPercent,
       bbosi,
       stockPrice,
+      lastRefresh: new Date().toISOString(),
     };
 
     const current = [...this._soldOptions(), sold];
@@ -76,6 +83,45 @@ export class SoldOptionsService {
     if (nv >= 0) return '#ca8a04';         // amarelo (atenção)
     if (nv >= -0.2) return '#ea580c';      // laranja (alerta)
     return '#dc2626';                       // vermelho (recomprar!)
+  }
+
+  /**
+   * Atualiza dados live (stockPrice, bbosi, nv) de todas as vendidas agrupando por ação.
+   */
+  refreshAll(): void {
+    const sold = this._soldOptions();
+    if (sold.length === 0) return;
+
+    // Agrupa por stock para não buscar duplicado
+    const stockTickers = [...new Set(sold.map(s => s.stockTicker))];
+
+    stockTickers.forEach(ticker => {
+      this.marketData.fetchAll(ticker).subscribe(({ stock, options }) => {
+        if (stock.price <= 0) return;
+
+        const indicators = this.indicatorService.calculateFromApi(options, stock.price);
+        const bbosi = this.indicatorService.calculateBBOSI(indicators);
+
+        const updated = this._soldOptions().map(s => {
+          if (s.stockTicker !== ticker) return s;
+
+          // Busca indicadores da opção vendida específica
+          const optInd = indicators.find(i => i.ticker === s.optionTicker);
+          return {
+            ...s,
+            stockPrice: stock.price,
+            bbosi,
+            nv: optInd ? optInd.nv : s.nv,
+            ve: optInd ? optInd.ve : s.ve,
+            lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
+            lastRefresh: new Date().toISOString(),
+          };
+        });
+
+        this._soldOptions.set(updated);
+        this.saveToStorage(updated);
+      });
+    });
   }
 
   private loadFromStorage(): SoldOption[] {

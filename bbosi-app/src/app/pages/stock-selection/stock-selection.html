@@ -23,7 +23,7 @@
               />
               <div class="sold-card__titles">
                 <span class="sold-card__ticker">{{ sold.optionTicker }}</span>
-                <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ sold.sellPrice.toFixed(2) }}</span>
+                <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ sold.sellPrice.toFixed(2) }}@if (sold.lastRefresh) { · <mat-icon class="sold-card__date-icon">schedule</mat-icon>{{ sold.lastRefresh | relativeTime }}}</span>
               </div>
               <div class="sold-card__nv" [class.text-green]="sold.nv > 0" [class.text-red]="sold.nv <= 0"
                    matTooltip="NV (Não Venda)">
@@ -97,10 +97,15 @@
 
   <!-- Stock Cards -->
   <section class="section">
-    <h2 class="section__title">
-      <mat-icon>trending_up</mat-icon>
-      Acoes
-    </h2>
+    <div class="section__header">
+      <h2 class="section__title">
+        <mat-icon>trending_up</mat-icon>
+        Acoes
+      </h2>
+      @if (lastUpdated()) {
+        <span class="timestamp"><mat-icon class="timestamp__icon">schedule</mat-icon>{{ lastUpdated() | relativeTime }}</span>
+      }
+    </div>
     <div class="stocks-grid">
       @for (stock of stocks(); track stock.ticker) {
         <div class="stock-card glass" (click)="selectStock(stock.ticker)">
@@ -116,6 +121,9 @@
           <div class="stock-card__price">
             @if (stock.price > 0) {
               <span class="stock-card__value">R$ {{ stock.price.toFixed(2) }}</span>
+              @if (stock.marketTime) {
+                <span class="stock-card__time"><mat-icon class="stock-card__time-icon">schedule</mat-icon>{{ stock.marketTime | relativeTime }}</span>
+              }
             } @else {
               <span class="stock-card__loading">--</span>
             }

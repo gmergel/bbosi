@@ -2,6 +2,7 @@ export interface Stock {
   ticker: string;
   name: string;
   price: number;
+  marketTime?: Date | null;
 }
 
 export interface OptionData {

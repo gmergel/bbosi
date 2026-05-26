@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,32 +6,52 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
+import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
 
 @Component({
   selector: 'app-stock-selection',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, RelativeTimePipe],
   templateUrl: './stock-selection.html',
   styleUrl: './stock-selection.scss',
 })
-export class StockSelectionComponent implements OnInit {
+export class StockSelectionComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private marketData = inject(MarketDataService);
   soldOptionsService = inject(SoldOptionsService);
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   stocks = signal<Stock[]>(this.marketData.getStocks());
+  lastUpdated = signal<Date | null>(null);
 
   ngOnInit(): void {
+    // Atualiza dados das opções vendidas
+    this.soldOptionsService.refreshAll();
+
+    // Auto-refresh a cada 2s
+    this.refreshInterval = setInterval(() => {
+      this.soldOptionsService.refreshAll();
+    }, 2000);
+
     const tickers = this.stocks();
     tickers.forEach((stock, i) => {
-      this.marketData.fetchStockPrice(stock.ticker).subscribe(price => {
+      this.marketData.fetchStockPrice(stock.ticker).subscribe(({ price, marketTime }) => {
         if (price > 0) {
           const updated = [...this.stocks()];
-          updated[i] = { ...updated[i], price };
+          updated[i] = { ...updated[i], price, marketTime };
           this.stocks.set(updated);
+          if (marketTime) {
+            this.lastUpdated.set(marketTime);
+          }
         }
       });
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   selectStock(ticker: string): void {

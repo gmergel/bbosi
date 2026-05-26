@@ -45,6 +45,7 @@ export class OptionsListComponent implements OnInit {
   isMock = signal<boolean>(false);
   showNoSell = signal<boolean>(false);
   expandedRow = signal<string | null>(null);
+  lastUpdated = signal<Date | null>(null);
 
   /** Opções filtradas e ordenadas por VDXX decrescente */
   options = computed(() => {
@@ -74,9 +75,10 @@ export class OptionsListComponent implements OnInit {
     this.loading.set(true);
 
     this.marketData.fetchAll(ticker).subscribe({
-      next: ({ stock, options, isMock }) => {
+      next: ({ stock, options, isMock, timestamp }) => {
         this.stock.set(stock);
         this.isMock.set(isMock);
+        this.lastUpdated.set(timestamp);
 
         if (options.length > 0) {
           const indicators = this.indicatorService.calculateFromApi(options, stock.price);

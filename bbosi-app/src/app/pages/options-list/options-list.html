@@ -25,6 +25,13 @@
     </div>
   </header>
 
+  <!-- Timestamp -->
+  @if (lastUpdated()) {
+    <div class="timestamp">
+      Atualizado em {{ lastUpdated() | date:'dd/MM/yyyy HH:mm' }}
+    </div>
+  }
+
   <!-- Loading -->
   @if (loading()) {
     <div class="loading-container">

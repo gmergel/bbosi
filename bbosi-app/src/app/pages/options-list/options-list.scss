@@ -4,6 +4,14 @@
   padding: 24px 16px 48px;
 }
 
+.timestamp {
+  text-align: right;
+  font-size: 0.65rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
 // ===== HEADER =====
 .options-header {
   display: flex;
@@ -11,7 +19,7 @@
   gap: 14px;
   margin-bottom: 24px;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 0;
   background: rgba(26, 39, 51, 0.7);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(79, 209, 197, 0.1);
@@ -20,7 +28,7 @@
 .header-logo {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 0;
   object-fit: contain;
   background: rgba(255, 255, 255, 0.05);
   padding: 4px;
@@ -77,7 +85,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 0;
   background: rgba(251, 191, 36, 0.08);
   border: 1px solid rgba(251, 191, 36, 0.2);
   color: #fbbf24;
@@ -106,7 +114,7 @@
 .best-pick {
   background: linear-gradient(135deg, rgba(79, 209, 197, 0.15), rgba(56, 178, 172, 0.08));
   border: 1px solid rgba(79, 209, 197, 0.2);
-  border-radius: 16px;
+  border-radius: 0;
   padding: 16px 20px;
   margin-bottom: 16px;
 }
@@ -178,7 +186,7 @@
 .option-row {
   background: rgba(26, 39, 51, 0.5);
   border: 1px solid rgba(79, 209, 197, 0.05);
-  border-radius: 14px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
@@ -210,7 +218,7 @@
 .option-row__rank {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,13 +283,13 @@
   flex: 1;
   height: 6px;
   background: var(--mat-sys-surface-container-highest);
-  border-radius: 3px;
+  border-radius: 0;
   overflow: hidden;
 }
 
 .vdxx-bar {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 0;
   transition: width 0.3s ease;
 
   &.vdxx-excellent { background: #16a34a; }
@@ -360,7 +368,7 @@
   gap: 12px;
   background: rgba(15, 25, 35, 0.6);
   border: 1px solid rgba(79, 209, 197, 0.08);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 12px 16px;
 }
 
@@ -396,7 +404,7 @@
   gap: 8px;
   padding: 8px 12px;
   margin-bottom: 12px;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(244, 67, 54, 0.1);
   border: 1px solid rgba(244, 67, 54, 0.3);
   color: #ef5350;
@@ -439,7 +447,7 @@
   gap: 8px;
   margin-top: 24px;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(26, 39, 51, 0.5);
   border: 1px solid rgba(79, 209, 197, 0.08);
   color: rgba(255, 255, 255, 0.45);
