@@ -23,7 +23,7 @@
               />
               <div class="sold-card__titles">
                 <span class="sold-card__ticker">{{ sold.optionTicker }}</span>
-                <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ sold.optionPrice.toFixed(2) }}@if (sold.lastRefresh) { · <mat-icon class="sold-card__date-icon">schedule</mat-icon>{{ sold.lastRefresh | relativeTime }}}</span>
+                <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}@if (sold.lastRefresh) { · <mat-icon class="sold-card__date-icon">schedule</mat-icon>{{ sold.lastRefresh | relativeTime }}}</span>
               </div>
               <div class="sold-card__nv" [class.text-green]="sold.nv > 0" [class.text-red]="sold.nv <= 0"
                    matTooltip="NV (Não Venda)">

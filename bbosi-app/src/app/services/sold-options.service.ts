@@ -109,6 +109,9 @@ export class SoldOptionsService {
 
           // Busca indicadores da opção vendida específica
           const optInd = indicators.find(i => i.ticker === s.optionTicker);
+          // Busca preço raw (mesmo que não passe nos filtros de indicadores)
+          const rawOpt = options.find(o => o.ticker === s.optionTicker);
+
           return {
             ...s,
             stockPrice: stock.price,
@@ -116,9 +119,9 @@ export class SoldOptionsService {
             nv: optInd ? optInd.nv : s.nv,
             ve: optInd ? optInd.ve : s.ve,
             lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
-            tradingDays: optInd ? optInd.tradingDays : s.tradingDays,
+            tradingDays: optInd ? optInd.tradingDays : (rawOpt ? rawOpt.tradingDays : s.tradingDays),
             vdxx: optInd ? optInd.vdxx : s.vdxx,
-            optionPrice: optInd ? optInd.price : s.optionPrice,
+            optionPrice: optInd ? optInd.price : (rawOpt ? rawOpt.price : (s.optionPrice ?? s.sellPrice)),
             lastRefresh: new Date().toISOString(),
           };
         });

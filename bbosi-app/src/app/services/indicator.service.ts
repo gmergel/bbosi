@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { OptionIndicators } from '../models/stock.model';
 import { OptionWithGreeks } from './market-data.service';
+import { LiquidityHistoryService } from './liquidity-history.service';
 
 /**
  * Regras do Bastter.com para Venda Coberta:
@@ -18,6 +19,7 @@ import { OptionWithGreeks } from './market-data.service';
  */
 @Injectable({ providedIn: 'root' })
 export class IndicatorService {
+  private liquidityHistory = inject(LiquidityHistoryService);
 
   // Constantes das regras Bastter
   private readonly MIN_PRICE = 0.05;          // Sem pozinhos
@@ -36,6 +38,9 @@ export class IndicatorService {
    */
   calculateFromApi(options: OptionWithGreeks[], stockPrice: number): OptionIndicators[] {
     if (stockPrice <= 0) return [];
+
+    // Registra negócios do dia no histórico de liquidez
+    this.liquidityHistory.recordDay(options.map(o => ({ ticker: o.ticker, trades: o.trades })));
 
     const totalTrades = options.reduce((sum, o) => sum + o.trades, 0);
 
@@ -70,8 +75,10 @@ export class IndicatorService {
     const bosi = ve * tradePercent;
 
     // === REGRAS DO BASTTER: determina se pode vender ===
+    // Usa média de liquidez (5 pregões) para o filtro, trades do dia para BOSI
+    const avgTrades = this.liquidityHistory.getAverageTrades(option.ticker, option.trades);
     const { noSell, noSellReason } = this.applyBastterRules(
-      option, ve, lastroPercent, delta, nv, taxaAnual, impliedVol
+      option, ve, lastroPercent, delta, nv, taxaAnual, impliedVol, avgTrades
     );
 
     return {
@@ -110,16 +117,17 @@ export class IndicatorService {
     delta: number,
     nv: number,
     taxaAnual: number,
-    impliedVol: number
+    impliedVol: number,
+    avgTrades: number
   ): { noSell: boolean; noSellReason: string } {
     // Regra 1: Sem pozinhos
     if (option.price < this.MIN_PRICE) {
       return { noSell: true, noSellReason: 'Pozinho (< R$0.05)' };
     }
 
-    // Regra 1b: Liquidez mínima (Bastter: "sem negócio, não existe")
-    if (option.trades < this.MIN_TRADES) {
-      return { noSell: true, noSellReason: `Sem liquidez (${Math.round(option.trades)} neg.)` };
+    // Regra 1b: Liquidez mínima (média 5 pregões)
+    if (avgTrades < this.MIN_TRADES) {
+      return { noSell: true, noSellReason: `Sem liquidez (média ${Math.round(avgTrades)} neg.)` };
     }
 
     // Regra 2: Lastro mínimo (muito ITM = risco de exercício)
