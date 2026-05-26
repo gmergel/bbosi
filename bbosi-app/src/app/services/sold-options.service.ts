@@ -18,6 +18,7 @@ export interface SoldOption {
   lastroPercent: number;
   bbosi: number;
   stockPrice: number;
+  optionPrice: number;
   lastRefresh?: string;
 }
 
@@ -46,6 +47,7 @@ export class SoldOptionsService {
       lastroPercent: option.lastroPercent,
       bbosi,
       stockPrice,
+      optionPrice: option.price,
       lastRefresh: new Date().toISOString(),
     };
 
@@ -114,6 +116,9 @@ export class SoldOptionsService {
             nv: optInd ? optInd.nv : s.nv,
             ve: optInd ? optInd.ve : s.ve,
             lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
+            tradingDays: optInd ? optInd.tradingDays : s.tradingDays,
+            vdxx: optInd ? optInd.vdxx : s.vdxx,
+            optionPrice: optInd ? optInd.price : s.optionPrice,
             lastRefresh: new Date().toISOString(),
           };
         });

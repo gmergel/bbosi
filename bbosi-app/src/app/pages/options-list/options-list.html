@@ -185,18 +185,16 @@
                 </div>
               </div>
               <div class="detail-actions">
-                @if (!option.noSell) {
-                  @if (!isSold(option.ticker)) {
-                    <button mat-flat-button color="primary" (click)="sellOption(option, $event)">
-                      <mat-icon>sell</mat-icon>
-                      VENDA
-                    </button>
-                  } @else {
-                    <button mat-stroked-button color="warn" (click)="unsellOption(option.ticker, $event)">
-                      <mat-icon>undo</mat-icon>
-                      Desfazer venda
-                    </button>
-                  }
+                @if (!isSold(option.ticker)) {
+                  <button mat-flat-button color="primary" (click)="sellOption(option, $event)">
+                    <mat-icon>sell</mat-icon>
+                    VENDA
+                  </button>
+                } @else {
+                  <button mat-stroked-button color="warn" (click)="unsellOption(option.ticker, $event)">
+                    <mat-icon>undo</mat-icon>
+                    Desfazer venda
+                  </button>
                 }
               </div>
             </div>
