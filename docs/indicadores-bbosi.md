@@ -1,208 +1,365 @@
-# Indicadores BBOSI - Bastter.com
+# BBOSI — Documentação Completa
 
-## Contexto: Venda Coberta de Opções
+## Visão Geral
 
-A **Venda Coberta** (Covered Call Writing) no método Bastter é uma estratégia de **remuneração de carteira de ações** de longo prazo. O investidor que já possui ações de empresas sólidas (Blue Chips) vende opções de compra (calls) sobre essas ações para gerar renda adicional (VE - Valor Extrínseco), com o lucro sendo usado para comprar mais ações.
+O **BBOSI** é um aplicativo Angular para análise de **venda coberta de opções** (Covered Call Writing) no mercado brasileiro. Combina os indicadores clássicos do método Bastter.com com melhorias quantitativas baseadas em literatura acadêmica, oferecendo:
 
-### Princípios Fundamentais
-
-- Objetivo: acumular mais ações, não especular
-- Vender VE (Valor Extrínseco) = lucrar com a passagem do tempo (theta positivo)
-- Quanto mais longe e menor a quantidade vendida → menos risco na alta, mas menos receita
-- Quanto mais perto e maior a quantidade → mais receita, mas mais risco se subir forte
-- VE eficiente para vendas: longe do preço da ação, muito VE, pouco gama, pouco tempo
-
-### Conceitos Base
-
-- **VE (Valor Extrínseco):** Parte do prêmio da opção que corresponde à expectativa/tempo. `VE = Prêmio - Valor Intrínseco`. Opções OTM só possuem VE.
-- **Lastro:** Distância percentual entre o preço da ação e o strike da opção. Representa a margem de segurança.
-- **Gregas relevantes:**
-  - **Delta:** centavos que a opção varia por R$1 de variação da ação
-  - **Gama:** taxa de variação do Delta (aceleração)
-  - **Theta:** centavos de VE que a opção perde por dia
+- Cálculo automático de indicadores (NV, VDX, VDXX, BOSI, BBOSI)
+- Filtros inteligentes com 10 regras de elegibilidade
+- Monitoramento em tempo real de opções vendidas
+- Sinais de saída quantitativos (Roll Signals)
+- Análise de regime de volatilidade (IV Rank/Percentile)
+- Delta Score para seleção otimizada de strikes
 
 ---
 
-## Os Indicadores
+## Arquitetura
+
+```
+src/app/
+├── services/
+│   ├── market-data.service.ts    → Busca dados (Yahoo Finance + opcoes.net.br)
+│   ├── indicator.service.ts      → Cálculo de todos os indicadores
+│   ├── sold-options.service.ts   → Gestão de posições vendidas + roll signals
+│   ├── iv-history.service.ts     → Histórico de IV ATM (90 pregões)
+│   ├── liquidity-history.service.ts → Média de liquidez (5 pregões)
+│   └── mock-data.service.ts      → Dados simulados (fora do pregão)
+├── pages/
+│   ├── stock-selection/          → Tela inicial: ações + vendas ativas
+│   └── options-list/             → Tela de opções: ranking + indicadores
+├── models/
+│   └── stock.model.ts            → Interfaces (Stock, OptionData, OptionIndicators)
+└── pipes/
+    └── relative-time.pipe.ts     → Timestamps relativos ("há 5min", "hoje 14:30")
+```
+
+### Fontes de Dados
+
+| Dado | API | Endpoint |
+|------|-----|----------|
+| Cotação da ação | Yahoo Finance | `/v8/finance/chart/{TICKER}.SA` |
+| Opções + Gregas | opcoes.net.br | `/api/v1?r0t=OptionsChain&r0p.underlying_asset_id={TICKER}` |
+
+Em produção (GitHub Pages), ambas passam por `corsproxy.io` para contornar CORS.
+
+---
+
+## Indicadores Clássicos (Método Bastter)
 
 ### 1. NV (Não Venda)
 
-Marca opções que **não devem ser vendidas** na venda coberta.
-
-**Critério:**
+Marca opções que **não devem ser vendidas**.
 
 ```
 NV = VE - (Delta + Gama)
 ```
 
-- Se `NV < 0`, a opção é marcada como "Não Venda"
-- **Significado:** o VE é menor que Delta + Gama, ou seja, se o mercado subir R$1, a opção ganha mais valor do que o VE que você vendeu. O risco supera o ganho potencial.
-- Também são NV opções muito ITM (dentro do dinheiro)
+- `NV < 0` → "Não Venda" — o risco supera o ganho potencial
+- **Significado:** se o mercado subir R$1, a opção ganha mais valor (Delta + Gama) do que o VE que você vendeu
 
-**Uso prático:** Eliminar da análise qualquer opção com NV negativo antes de considerar vendas.
+**Implementação:** `indicator.service.ts` → `calcIndicators()`
 
 ---
 
 ### 2. VDX (Índice de Eficiência da Venda)
 
-Mede a **eficiência** de uma venda de opção. Quanto maior o VDX, melhor a opção para vender.
+Eficiência relativa da venda:
 
-**Fatores considerados:**
-- **Gama** (risco de aceleração — quanto menor, melhor para venda)
-- **Tempo** (dias para vencimento)
-- **Tamanho** (valor financeiro do VE)
-- **Distância** (lastro percentual até o strike)
+```
+VDX = (NV / Cotação_opção) × 100
+```
 
-O VDX varia conforme a volatilidade do mercado (mercados mais voláteis produzem VDXs maiores) e com o preço das ações. O site Bastter.com fornecia um **VDX mínimo** para cada ação.
-
-**Uso prático:**
-- Vender somente opções com VDX acima do mínimo
-- Aumentar vendas quando VDX > 10
-- Diminuir vendas quando VDX < 6
-- Escolher entre opções elegíveis a de maior VDX
+Quanto maior, melhor a relação risco/retorno.
 
 ---
 
-### 3. VDXX (VDX Estendido)
+### 3. VDXX (VDX Estendido + Delta Score)
 
-Versão mais completa/avançada do VDX. Fórmula reconstruída a partir do fórum do Bastter:
+Versão aprimorada que incorpora lastro, tempo e **proximidade ao delta ideal**:
 
 ```
-VDXX = Lastro% × (NV / Cotação_opção) × (100 / 2) × (1,3 - num_pregões / 100)
+VDXX = Lastro% × (NV / Cotação) × 50 × FatorTempo × DeltaScore
 ```
 
 **Onde:**
-- **Lastro%** = distância percentual do preço da ação até o strike
-  - Ex: ação a R$8,67, strike R$11,87 → lastro = (11,87 - 8,67) / 8,67 = 36,79%
-- **NV** = valor do indicador NV da opção (VE - Delta - Gama, quando positivo)
-- **Cotação da opção** = prêmio atual da opção
-- **num_pregões** = número de pregões (dias úteis de bolsa) até o vencimento
+- `Lastro%` = `(Strike - Preço_ação) / Preço_ação × 100`
+- `FatorTempo` = `1,3 - pregões/100` (premia vencimentos mais próximos)
+- `DeltaScore` = `exp(-(delta - 0.20)² / 0.12²)` — **gaussiana centrada em delta 0.20**
 
-**Interpretação dos fatores:**
-- `Lastro%`: premia opções mais distantes (mais seguras)
-- `NV / Cotação`: relação entre o "valor líquido" e o custo — eficiência relativa
-- `(100/2)`: fator de escala/normalização
-- `(1,3 - pregões/100)`: fator tempo — opções mais próximas do vencimento têm VDXX maior (decaimento temporal mais acelerado = mais eficiente para venda de curto prazo)
+**Delta Score (melhoria acadêmica):**
+
+| Delta | Score | Interpretação |
+|-------|-------|---------------|
+| 0.20 | 1.00 | Sweet spot ideal |
+| 0.15 | 0.86 | Muito bom |
+| 0.25 | 0.86 | Muito bom |
+| 0.10 | 0.54 | Aceitável |
+| 0.30 | 0.54 | Aceitável |
+| 0.05 | 0.19 | Penalizado |
+| 0.40 | 0.07 | Fortemente penalizado |
+
+**Fundamento:** Estudos empíricos (Mugwagwa et al., 2012; tastytrade research) mostram que calls vendidas com delta 0.15-0.25 oferecem o melhor equilíbrio entre probabilidade de lucro, prêmio recebido e risco de exercício.
 
 ---
 
 ### 4. BOSI (Bastter Options Strength Index)
 
-Indica **onde está a força do mercado de opções** — em qual strike a concentração de atividade e valor está localizada.
-
-**Fórmula (versão simplificada):**
+Indica onde está a **força do mercado de opções**:
 
 ```
 BOSI = VE × %NumNeg
 ```
 
-**Fórmula (versão completa do curso):**
-
-```
-BOSI = Gama × %NumNeg × VE
-```
-
-**Onde:**
-- **VE** = Valor Extrínseco da opção
-- **%NumNeg** = percentual do número de negócios da série que está naquela opção
-  - Ex: série com 10.000 negócios totais, opção com 1.000 negócios → %NumNeg = 10%
-- **Gama** = grega gama da opção (aceleração)
-
-**Uso:** Marcador de **STOP** para a venda coberta — quando o BOSI da opção vendida sobe significativamente, é sinal para recomprar (stopar) ou rolar a posição.
+- `%NumNeg` = negócios da opção / total de negócios da série × 100
+- Uso: marcador de STOP — quando BOSI da vendida sobe, considerar fechar
 
 ---
 
-### 5. BBOSI (Bastter BOSI)
+### 5. BBOSI (Bastter BOSI consolidado)
 
-O indicador **consolidado da série**. É uma **média ponderada dos strikes**, usando o BOSI como peso.
-
-**Fórmula:**
+**Média ponderada dos strikes**, usando BOSI como peso:
 
 ```
 BBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
 ```
 
-**Cálculo passo a passo:**
-1. Para cada opção `i` da série, calcular `Strike_i × BOSI_i`
-2. Somar todos esses produtos
-3. Somar todos os BOSIs
-4. Dividir a soma dos produtos pela soma dos BOSIs
+Representa o **"centro de massa"** do mercado de opções. Usado como referência de stop: quando o BBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
+
+---
+
+## Regras de Elegibilidade (Filtros)
+
+O app aplica **10 regras** sequenciais para determinar se uma opção pode ser vendida:
+
+| # | Regra | Critério | Motivo |
+|---|-------|----------|--------|
+| 1 | Sem pozinhos | Preço > R$0,05 | Opções baratas demais têm spread enorme |
+| 2 | Liquidez mínima | Média 5 pregões ≥ 50 negócios | Garante saída viável |
+| 3 | Lastro mínimo | Lastro ≥ -2% | Evita ITM profundo (risco de exercício) |
+| 4 | Prazo mínimo | ≥ 10 dias úteis | Pouco tempo = gamma risk |
+| 5 | Prazo máximo | ≤ 45 dias úteis | Theta decai pouco longe do vencimento |
+| 6 | VE positivo | VE > 0 | Sem VE não há o que vender |
+| 7 | NV positivo | VE - Delta - Gama > 0 | Regra principal Bastter |
+| 8 | Delta na faixa | 0.05 ≤ Delta ≤ 0.40 | Zona do lançador coberto |
+| 9 | Taxa mínima | ≥ 6% a.a. anualizada | Retorno mínimo que justifica o risco |
+| 10 | IV não extrema | IV ≤ 150% | IV absurda indica evento extremo |
+
+**Liquidez (média 5 pregões):** O filtro usa a média de negócios dos últimos 5 dias (armazenados no localStorage) para evitar falsos positivos de dias atípicos. O BOSI continua usando os trades do dia (fiel ao Bastter).
+
+---
+
+## Melhorias Quantitativas
+
+### 6. IV Rank e IV Percentile
+
+Mede se a volatilidade implícita atual está **cara ou barata** historicamente.
+
+**Serviço:** `iv-history.service.ts`
+- Armazena IV ATM diária por ação (últimos 90 pregões) no localStorage
+- Atualizado automaticamente a cada consulta de opções
+
+**Fórmulas:**
+
+```
+IV Rank = (IV_atual - IV_mínima) / (IV_máxima - IV_mínima) × 100
+
+IV Percentile = (dias com IV < IV_atual) / total_dias × 100
+```
 
 **Interpretação:**
 
-O BBOSI representa o **"centro de massa"** do mercado de opções — o strike ponderado onde a força está concentrada.
+| IV Rank | Significado | Ação |
+|---------|-------------|------|
+| 0-30% | IV barata | Prêmios baixos — vender menos |
+| 30-70% | IV normal | Operação regular |
+| 70-100% | IV cara | Prêmios altos — bom para vender |
 
-**Uso como STOP:**
-- Se o BBOSI sobe e se aproxima do preço atual da ação → a pressão compradora nas opções está perto do preço, hora de recomprar/rolar
-- Vantagem sobre usar apenas o preço da opção: o BBOSI considera o mercado como um todo, não apenas a opção isolada
-- Exemplo real do fórum: "Apesar de subir 0,10 no preço, o lastro ficou praticamente inalterado. Uma das vantagens de se usar o BBOSI para stopar!"
-
----
-
-## Marcadores de Risco Complementares
-
-| Marcador | Fórmula | Limite | Uso |
-|----------|---------|--------|-----|
-| **LIMITEX (LX)** | Valor vendido em opções / Valor da carteira × 100 | 5-6% (máx) | Não ultrapassar X% da carteira vendido em opções |
-| **THEX** | Theta da operação / Valor da carteira | 5 (máx 7) | Controlar o risco gama nas altas |
-
-**Regras do LX:**
-- Comece com 2-3%
-- Nunca passe de 5-6% mesmo com experiência
-- Limite absoluto de dívida: R$20.000
-- Se ultrapassar, comprar opções onde está vendido até voltar ao limite
-
-**Regras do THEX:**
-- Theta positivo é diretamente proporcional ao Gama negativo
-- Antes de corrigir o THEX, verifique e corrija primeiro o LX
+**Requisito:** Mínimo 5 pregões de histórico para ativar. Melhora com o tempo (ideal: 60+ dias).
 
 ---
 
-## Fluxo de Decisão para Venda Coberta
+### 7. Regime de Volatilidade (Vol Regime)
+
+Classificação do ambiente de mercado em 4 níveis:
+
+| Regime | Critério | Banner | Ação recomendada |
+|--------|----------|--------|------------------|
+| **Extreme** | IV ATM > 80% | 🔴 Vermelho | Evitar novas vendas |
+| **High** | IV ATM > 50% OU IV Rank > 85% | 🟡 Amarelo | Reduzir tamanho |
+| **Normal** | Dentro dos limiares | Sem banner | Operar normalmente |
+| **Low** | IV ATM < 15% OU IV Rank < 15% | 🔵 Azul | Prêmios reduzidos |
+
+**Fundamento acadêmico:** Ilmanen (2012) e Fallon, Park & Yu (2015) demonstram que vendedores de volatilidade sofrem drawdowns severos em regimes de expansão de vol. O banner alerta visualmente para evitar over-exposure nesses momentos.
+
+---
+
+### 8. Barra de Lucro Capturado (Profit Bar)
+
+Monitora em tempo real quanto do prêmio vendido já foi "ganho":
 
 ```
-1. Filtrar opções com NV positivo (eliminar "Não Venda")
-2. Verificar VDX/VDXX mínimo para a ação
-3. Entre as elegíveis, escolher a de maior VDX/VDXX
-4. Verificar se a venda respeita LIMITEX (LX)
-5. Verificar se a venda respeita THEX
-6. Executar a venda → definir:
-   - Alvo (preço para recompra com lucro)
-   - Stop (BBOSI ou BOSI como referência)
-   - Prazo máximo
-7. Monitorar:
-   - Se mercado cai/fica: aguardar atingir alvo
-   - Se mercado sobe: usar BBOSI como stop para rolar/recomprar
+% Capturado = (Preço_venda - Preço_atual) / Preço_venda × 100
+```
+
+**Visualização:** Barra de progresso com marcador no alvo de 50%.
+
+| Faixa | Cor | Significado |
+|-------|-----|-------------|
+| 0-25% | Cinza | Início da operação |
+| 25-50% | Amarelo | Em progresso |
+| 50-75% | Verde | Alvo atingido — considerar fechar |
+| 75-100% | Teal | Excelente — fechar ou deixar expirar |
+
+**Por que alvo em 50%?**
+
+Evidência empírica (tastytrade, milhões de trades backtestados):
+- Os primeiros 50% são capturados em ~40% do tempo da operação
+- Os últimos 50% levam ~60% do tempo restante
+- Fechar a 50% e reabrir nova posição gera melhor retorno por unidade de tempo
+- Win rate sobe de ~60% (expiração) para ~80% (alvo 50%)
+- Reduz exposição a reversões e eventos inesperados
+
+---
+
+### 9. Roll Signals (Sinais de Saída Quantitativos)
+
+Sistema de 5 regras que determinam automaticamente quando agir sobre uma posição:
+
+| Prioridade | Regra | Condição | Severidade | Ação |
+|------------|-------|----------|------------|------|
+| 1 | Alvo atingido | % Capturado ≥ 50% E DTE > 5 | 🟢 Info | Fechar com lucro |
+| 2 | Prêmio esgotado | DTE ≤ 7 E % Capturado ≥ 75% | 🟢 Info | Rolar para próximo vencimento |
+| 3 | Gamma Risk | DTE ≤ 5 E % Capturado < 50% | 🔴 Danger | Fechar imediatamente |
+| 4 | BBOSI pressão | (Strike - BBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
+| 5 | NV negativo | NV < 0 | 🔴 Danger | Recomprar |
+
+**Gamma Risk explicado:** Nas últimas 5 sessões antes do vencimento, o gamma é máximo. Se a opção ainda tem prêmio significativo (< 50% capturado), qualquer movimento do ativo contra a posição pode transformar lucro em prejuízo rapidamente. É a zona mais perigosa para o vendedor.
+
+---
+
+## Interface do Usuário
+
+### Tela Inicial (Stock Selection)
+
+**Cards de vendas ativas:**
+- Logo + ticker da opção
+- Meta: ação · dias restantes · preço atual · timestamp
+- NV badge (colorido por status)
+- Alert banner (roll signal com severidade)
+- Barra visual BBOSI/Preço/Strike com marcadores
+- Barra de progresso de lucro (com alvo 50%)
+
+**Cards de ações:**
+- Logo + nome + preço (Yahoo Finance)
+- Timestamp relativo do último update
+- Click → abre lista de opções
+
+### Tela de Opções (Options List)
+
+**Header:**
+- Preço da ação + BBOSI da série
+
+**Banners informativos:**
+- Vol Regime (se ≠ normal)
+- IV Info: IV ATM, IV Rank, IV Percentile, dias de histórico
+
+**Ranking de opções:**
+- Ordenadas por VDXX decrescente
+- Badge com rank visual (cores por faixa de VDXX)
+- Destaque da "Melhor Oportunidade" (card especial)
+- Toggle para mostrar/ocultar "Não Venda"
+- Detalhes expandidos ao clicar (todas as gregas + indicadores)
+- Botão de venda → adiciona ao monitoramento
+
+---
+
+## Ciclo de Vida de uma Operação
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 1. SELEÇÃO                                              │
+│    • Escolher ação → ver ranking VDXX                   │
+│    • Verificar Vol Regime (banner)                       │
+│    • Verificar IV Rank (≥ 30% ideal)                    │
+│    • Escolher opção com maior VDXX (passa nos filtros)  │
+│    • Clicar VENDA → registra posição                    │
+├─────────────────────────────────────────────────────────┤
+│ 2. MONITORAMENTO (auto-refresh 2s)                      │
+│    • Preço da opção atualiza live                       │
+│    • Barra de lucro % avança                            │
+│    • NV recalcula continuamente                         │
+│    • BBOSI monitora pressão compradora                  │
+│    • Roll Signals avaliam 5 regras a cada refresh       │
+├─────────────────────────────────────────────────────────┤
+│ 3. SAÍDA (disparada por Roll Signal)                    │
+│    • 🟢 Alvo 50% → fechar, reabrir nova se VDXX bom   │
+│    • 🟢 Prêmio esgotado → rolar para próximo vcto     │
+│    • 🟡 BBOSI próximo → rolar ou reduzir               │
+│    • 🔴 Gamma Risk → fechar imediatamente              │
+│    • 🔴 NV negativo → recomprar                        │
+│    • Remover card → operação encerrada                  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Dados Necessários para Cálculo
+## Armazenamento Local (localStorage)
 
-Para implementar estes indicadores em um aplicativo, são necessários:
+| Chave | Conteúdo | Retenção |
+|-------|----------|----------|
+| `bbosi-sold-options` | Opções vendidas ativas | Até remoção manual |
+| `bbosi-iv-history` | IV ATM diária por ação | 90 pregões |
+| `bbosi-liquidity-history` | Negócios diários por opção | 5 pregões |
+| `bbosi-options-{TICKER}` | Cache de opções (último fetch) | Até próximo fetch |
+| `bbosi-price-{TICKER}` | Cache de preço da ação | Até próximo fetch |
 
-| Dado | Fonte | Uso |
-|------|-------|-----|
-| Preço da ação (spot) | API de cotações | Lastro, VE |
-| Strike da opção | Cadastro B3 | BBOSI, Lastro |
-| Prêmio da opção (cotação) | API de cotações | VE, VDXX |
-| Delta | Black-Scholes (calculado) | NV |
-| Gama | Black-Scholes (calculado) | NV, BOSI, VDX |
-| Theta | Black-Scholes (calculado) | THEX |
-| Volatilidade Histórica (VH) | Calculada (fechamentos) | B&S |
-| Taxa de juros (Selic) | Banco Central | B&S |
-| Dias úteis até vencimento | Calendário B3 | VDXX, VDX |
-| Número de negócios por opção | API de cotações/B3 | BOSI, %NumNeg |
-| Número total de negócios da série | API de cotações/B3 | %NumNeg |
+---
+
+## Ações Monitoradas
+
+| Ticker | Empresa |
+|--------|---------|
+| BBAS3 | Banco do Brasil |
+| BBDC4 | Bradesco |
+| BBSE3 | BB Seguridade |
+| ITUB4 | Itaú Unibanco |
+| PETR4 | Petrobras |
+| VALE3 | Vale |
+
+---
+
+## Limitações Conhecidas
+
+1. **Dados da opcoes.net.br podem estar defasados** — o campo "último" reflete o último negócio registrado, que pode ser do dia anterior se a opção ainda não negociou hoje.
+
+2. **IV Rank precisa de histórico** — Nos primeiros 5 dias de uso, IV Rank/Percentile não aparece. Após 20+ dias, torna-se confiável.
+
+3. **Mercado fechado** — Fora do horário de pregão (10h-17h), a API retorna dados em cache ou mock.
+
+4. **CORS em produção** — Usa corsproxy.io como intermediário. Se o proxy ficar indisponível, o app perde acesso aos dados.
+
+5. **Delta Score é opinativo** — O centro em 0.20 e spread de 0.12 são baseados em literatura mas podem não ser ótimos para todos os ativos/regimes.
 
 ---
 
 ## Referências
 
-- Livro "Introdução às Opções" - Maurício Hissa (Bastter)
-- Livro "Operando Opções" - Maurício Hissa (Bastter)
-- Apostila "Venda Coberta para Remuneração" - Bastter.com
-- Curso Bastter Blue - Introdução às Opções
-- Manual "Nunca Foi Tão Fácil Fazer Venda Coberta" - Bastter Blue
+### Método Bastter (Base)
+- Livro "Introdução às Opções" — Maurício Hissa (Bastter)
+- Livro "Operando Opções" — Maurício Hissa (Bastter)
+- Apostila "Venda Coberta para Remuneração" — Bastter.com
+- Curso Bastter Blue — Introdução às Opções
+- Manual "Nunca Foi Tão Fácil Fazer Venda Coberta" — Bastter Blue
 - Fóruns Bastter.com (discussões sobre VDXX, BBOSI)
-- Planilha Bastter Blue / Painel Bastter Blue
+
+### Literatura Acadêmica (Melhorias)
+- Israelov & Nielsen (2015) — "Covered Calls Uncovered"
+- Ilmanen (2012) — "Do Financial Markets Reward Buying or Selling Insurance?"
+- Constantinides, Jackwerth & Savov (2013) — Variance Risk Premium
+- Fallon, Park & Yu (2015) — Vol selling drawdowns em crises
+- Simon (2013) — "The VIX Futures Basis" (timing de venda de vol)
+- Mugwagwa et al. (2012) — Delta-based strike selection
+
+### Evidência Empírica
+- tastytrade research — Alvos de saída ótimos (50% profit target)
+- CBOE studies — Covered call systematic strategies (BXM index)
