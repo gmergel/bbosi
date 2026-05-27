@@ -32,6 +32,37 @@
     </div>
   }
 
+  <!-- Vol Regime Banner -->
+  @if (volRegime() !== 'normal') {
+    <div class="vol-regime-banner" [class]="'vol-regime--' + volRegime()">
+      @if (volRegime() === 'extreme') {
+        <mat-icon>error</mat-icon>
+        <span>Volatilidade extrema — evite novas vendas</span>
+      } @else if (volRegime() === 'high') {
+        <mat-icon>warning</mat-icon>
+        <span>Vol elevada (IV Rank {{ ivRank() >= 0 ? ivRank() + '%' : '?' }}) — reduza tamanho</span>
+      } @else if (volRegime() === 'low') {
+        <mat-icon>info</mat-icon>
+        <span>Vol baixa (IV Rank {{ ivRank() >= 0 ? ivRank() + '%' : '?' }}) — premios reduzidos</span>
+      }
+    </div>
+  }
+
+  <!-- IV Rank Info -->
+  @if (ivRank() >= 0) {
+    <div class="iv-info">
+      <span class="iv-info__label">IV ATM</span>
+      <span class="iv-info__value">{{ (ivCurrent() * 100).toFixed(1) }}%</span>
+      <span class="iv-info__divider">·</span>
+      <span class="iv-info__label">IV Rank</span>
+      <span class="iv-info__value" [class.iv--high]="ivRank() > 50" [class.iv--low]="ivRank() <= 30">{{ ivRank() }}%</span>
+      <span class="iv-info__divider">·</span>
+      <span class="iv-info__label">Percentil</span>
+      <span class="iv-info__value">{{ ivPercentile() }}%</span>
+      <span class="iv-info__days">({{ ivDays() }}d)</span>
+    </div>
+  }
+
   <!-- Loading -->
   @if (loading()) {
     <div class="loading-container">
@@ -206,7 +237,7 @@
     <!-- Fontes dos dados -->
     <footer class="data-sources">
       <mat-icon>source</mat-icon>
-      <span>Cotacao: Yahoo Finance &middot; Opcoes e gregas: opcoes.net.br &middot; Regras: Bastter.com</span>
+      <span>Cotacao: Yahoo Finance &middot; Opcoes e gregas: opcoes.net.br</span>
     </footer>
   }
 </div>

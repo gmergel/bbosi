@@ -293,12 +293,17 @@
     height: 16px;
   }
 
-  &.alert--recomprar {
+  &.alert--info {
+    background: rgba(79, 209, 197, 0.12);
+    color: #4fd1c5;
+  }
+
+  &.alert--warn {
     background: rgba(251, 191, 36, 0.12);
     color: #fbbf24;
   }
 
-  &.alert--rolar {
+  &.alert--danger {
     background: rgba(220, 38, 38, 0.12);
     color: #f87171;
   }
@@ -307,27 +312,78 @@
 .text-green { color: #16a34a !important; }
 .text-red { color: #f87171 !important; }
 
-// Alvo de lucro
-.sold-card__target {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+// Barra de progresso de lucro
+.sold-card__profit {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.7rem;
 }
 
-.sold-card__target-label {
+.profit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.profit-label {
+  font-size: 0.65rem;
   color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.sold-card__target-value {
-  font-weight: 600;
-  color: #4fd1c5;
+.profit-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface-variant);
+
+  &.profit--target {
+    color: #4fd1c5;
+  }
 }
 
-.sold-card__target-gain {
+.profit-bar {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  overflow: visible;
+}
+
+.profit-bar__fill {
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.5s ease;
+
+  &.profit-bar--low {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  &.profit-bar--mid {
+    background: #ca8a04;
+  }
+  &.profit-bar--target {
+    background: #16a34a;
+  }
+  &.profit-bar--high {
+    background: #4fd1c5;
+  }
+}
+
+.profit-bar__marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: rgba(79, 209, 197, 0.6);
+  transform: translateX(-50%);
+}
+
+.profit-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.6rem;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.7;
 }

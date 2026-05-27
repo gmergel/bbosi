@@ -12,6 +12,77 @@
   opacity: 0.7;
 }
 
+// ===== VOL REGIME BANNER =====
+.vol-regime-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.vol-regime--extreme {
+    background: rgba(220, 38, 38, 0.12);
+    color: #f87171;
+    border-left: 3px solid #dc2626;
+  }
+
+  &.vol-regime--high {
+    background: rgba(251, 191, 36, 0.12);
+    color: #fbbf24;
+    border-left: 3px solid #ca8a04;
+  }
+
+  &.vol-regime--low {
+    background: rgba(96, 165, 250, 0.10);
+    color: #93c5fd;
+    border-left: 3px solid #3b82f6;
+  }
+}
+
+// ===== IV INFO =====
+.iv-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: 16px;
+}
+
+.iv-info__label {
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.7;
+}
+
+.iv-info__value {
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+
+  &.iv--high { color: #4fd1c5; }
+  &.iv--low { color: #93c5fd; }
+}
+
+.iv-info__divider {
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.3;
+}
+
+.iv-info__days {
+  font-size: 0.6rem;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.5;
+}
+
 // ===== HEADER =====
 .options-header {
   display: flex;

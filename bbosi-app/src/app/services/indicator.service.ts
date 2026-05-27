@@ -2,6 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { OptionIndicators } from '../models/stock.model';
 import { OptionWithGreeks } from './market-data.service';
 import { LiquidityHistoryService } from './liquidity-history.service';
+import { IvHistoryService } from './iv-history.service';
+
+export type VolRegime = 'low' | 'normal' | 'high' | 'extreme';
 
 /**
  * Regras do Bastter.com para Venda Coberta:
@@ -20,6 +23,7 @@ import { LiquidityHistoryService } from './liquidity-history.service';
 @Injectable({ providedIn: 'root' })
 export class IndicatorService {
   private liquidityHistory = inject(LiquidityHistoryService);
+  private ivHistory = inject(IvHistoryService);
 
   // Constantes das regras Bastter
   private readonly MIN_PRICE = 0.05;          // Sem pozinhos
@@ -36,11 +40,19 @@ export class IndicatorService {
    * Calcula indicadores usando gregas vindas da API (opcoes.net.br)
    * e aplica todas as regras do Bastter para classificação.
    */
-  calculateFromApi(options: OptionWithGreeks[], stockPrice: number): OptionIndicators[] {
+  calculateFromApi(options: OptionWithGreeks[], stockPrice: number, stockTicker?: string): OptionIndicators[] {
     if (stockPrice <= 0) return [];
 
     // Registra negócios do dia no histórico de liquidez
     this.liquidityHistory.recordDay(options.map(o => ({ ticker: o.ticker, trades: o.trades })));
+
+    // Registra IV ATM no histórico (para IV Rank)
+    if (stockTicker) {
+      const atmIv = this.getAtmIv(options);
+      if (atmIv > 0) {
+        this.ivHistory.recordDay(stockTicker, atmIv);
+      }
+    }
 
     const totalTrades = options.reduce((sum, o) => sum + o.trades, 0);
 
@@ -69,9 +81,9 @@ export class IndicatorService {
       ? (ve / stockPrice) * (252 / option.tradingDays) * 100
       : 0;
 
-    // VDXX: indicador composto do Bastter
+    // VDXX: indicador composto do Bastter (com delta score)
     const vdx = option.price > 0 ? (nv / option.price) * 100 : 0;
-    const vdxx = this.calcVDXX(lastroPercent, nv, option.price, option.tradingDays);
+    const vdxx = this.calcVDXX(lastroPercent, nv, option.price, option.tradingDays, delta);
     const bosi = ve * tradePercent;
 
     // === REGRAS DO BASTTER: determina se pode vender ===
@@ -197,10 +209,71 @@ export class IndicatorService {
     return ((strike - stockPrice) / stockPrice) * 100;
   }
 
-  private calcVDXX(lastroPercent: number, nv: number, optionPrice: number, tradingDays: number): number {
+  private calcVDXX(lastroPercent: number, nv: number, optionPrice: number, tradingDays: number, delta: number): number {
     if (optionPrice <= 0 || tradingDays <= 0) return 0;
     // Penaliza prazo longo, bonifica lastro alto e NV alto
     const timeFactor = 1.3 - tradingDays / 100;
-    return lastroPercent * (nv / optionPrice) * 50 * timeFactor;
+    const deltaScore = this.calcDeltaScore(delta);
+    return lastroPercent * (nv / optionPrice) * 50 * timeFactor * deltaScore;
+  }
+
+  /**
+   * Delta Score: premia opções no sweet spot de delta 0.15-0.25.
+   * Retorna ~1.0 para delta=0.20, decai suavemente fora desse range.
+   */
+  private calcDeltaScore(delta: number): number {
+    const ideal = 0.20;
+    const spread = 0.12;
+    return Math.exp(-Math.pow((delta - ideal) / spread, 2));
+  }
+
+  /**
+   * Extrai a IV ATM (ou mais próxima do dinheiro) das opções.
+   */
+  private getAtmIv(options: OptionWithGreeks[]): number {
+    const atm = options.find(o => o.moneyness === 'ATM');
+    if (atm && atm.impliedVol > 0) return atm.impliedVol;
+
+    // Fallback: opção com menor distância percentual
+    const sorted = [...options]
+      .filter(o => o.impliedVol > 0)
+      .sort((a, b) => Math.abs(a.distancePercent) - Math.abs(b.distancePercent));
+    return sorted[0]?.impliedVol ?? 0;
+  }
+
+  /**
+   * Determina o regime de volatilidade do mercado para o ativo.
+   * Baseado na IV ATM atual vs. limiares fixos + contexto histórico.
+   */
+  getVolRegime(options: OptionWithGreeks[], stockTicker?: string): VolRegime {
+    const atmIv = this.getAtmIv(options);
+    if (atmIv <= 0) return 'normal';
+
+    // Limiares absolutos
+    if (atmIv > 0.80) return 'extreme';
+    if (atmIv > 0.50) return 'high';
+    if (atmIv < 0.15) return 'low';
+
+    // Se tem histórico, verifica IV Rank
+    if (stockTicker) {
+      const rank = this.ivHistory.getIvRank(stockTicker, atmIv);
+      if (rank >= 0) {
+        if (rank > 85) return 'high';
+        if (rank < 15) return 'low';
+      }
+    }
+
+    return 'normal';
+  }
+
+  /**
+   * Retorna dados de IV Rank/Percentile para um ativo.
+   */
+  getIvInfo(stockTicker: string, options: OptionWithGreeks[]): { rank: number; percentile: number; currentIv: number; days: number } {
+    const currentIv = this.getAtmIv(options);
+    const rank = this.ivHistory.getIvRank(stockTicker, currentIv);
+    const percentile = this.ivHistory.getIvPercentile(stockTicker, currentIv);
+    const days = this.ivHistory.getHistoryDays(stockTicker);
+    return { rank, percentile, currentIv, days };
   }
 }

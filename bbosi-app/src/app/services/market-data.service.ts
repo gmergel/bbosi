@@ -44,6 +44,7 @@ export class MarketDataService {
     { ticker: 'BBAS3', name: 'Banco do Brasil', price: 0 },
     { ticker: 'BBDC4', name: 'Bradesco', price: 0 },
     { ticker: 'BBSE3', name: 'BB Seguridade', price: 0 },
+    { ticker: 'ITUB4', name: 'Itaú Unibanco', price: 0 },
     { ticker: 'PETR4', name: 'Petrobras', price: 0 },
     { ticker: 'VALE3', name: 'Vale', price: 0 },
   ];

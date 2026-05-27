@@ -10,7 +10,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatePipe } from '@angular/common';
 import { MarketDataService } from '../../services/market-data.service';
-import { IndicatorService } from '../../services/indicator.service';
+import { IndicatorService, VolRegime } from '../../services/indicator.service';
 import { SoldOptionsService } from '../../services/sold-options.service';
 import { Stock, OptionIndicators } from '../../models/stock.model';
 
@@ -46,6 +46,11 @@ export class OptionsListComponent implements OnInit {
   showNoSell = signal<boolean>(false);
   expandedRow = signal<string | null>(null);
   lastUpdated = signal<Date | null>(null);
+  volRegime = signal<VolRegime>('normal');
+  ivRank = signal<number>(-1);
+  ivPercentile = signal<number>(-1);
+  ivCurrent = signal<number>(0);
+  ivDays = signal<number>(0);
 
   /** Opções filtradas e ordenadas por VDXX decrescente */
   options = computed(() => {
@@ -81,9 +86,17 @@ export class OptionsListComponent implements OnInit {
         this.lastUpdated.set(timestamp);
 
         if (options.length > 0) {
-          const indicators = this.indicatorService.calculateFromApi(options, stock.price);
+          const indicators = this.indicatorService.calculateFromApi(options, stock.price, ticker);
           this.allOptions.set(indicators);
           this.bbosi.set(this.indicatorService.calculateBBOSI(indicators));
+
+          // Vol regime e IV Rank
+          this.volRegime.set(this.indicatorService.getVolRegime(options, ticker));
+          const ivInfo = this.indicatorService.getIvInfo(ticker, options);
+          this.ivRank.set(ivInfo.rank);
+          this.ivPercentile.set(ivInfo.percentile);
+          this.ivCurrent.set(ivInfo.currentIv);
+          this.ivDays.set(ivInfo.days);
         }
         this.loading.set(false);
       },

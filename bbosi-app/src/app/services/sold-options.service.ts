@@ -22,6 +22,12 @@ export interface SoldOption {
   lastRefresh?: string;
 }
 
+export interface RollSignal {
+  shouldRoll: boolean;
+  reason: string;
+  severity: 'info' | 'warn' | 'danger';
+}
+
 const STORAGE_KEY = 'bbosi-sold-options';
 
 @Injectable({ providedIn: 'root' })
@@ -101,7 +107,7 @@ export class SoldOptionsService {
       this.marketData.fetchAll(ticker).subscribe(({ stock, options }) => {
         if (stock.price <= 0) return;
 
-        const indicators = this.indicatorService.calculateFromApi(options, stock.price);
+        const indicators = this.indicatorService.calculateFromApi(options, stock.price, ticker);
         const bbosi = this.indicatorService.calculateBBOSI(indicators);
 
         const updated = this._soldOptions().map(s => {
@@ -130,6 +136,53 @@ export class SoldOptionsService {
         this.saveToStorage(updated);
       });
     });
+  }
+
+  /**
+   * Calcula % do prêmio já capturado (lucro realizado até agora).
+   * 100% = opção zerou; 50% = metade do prêmio vendido já virou lucro.
+   */
+  getProfitCaptured(sold: SoldOption): number {
+    const currentPrice = sold.optionPrice ?? sold.sellPrice;
+    if (sold.sellPrice <= 0) return 0;
+    return Math.max(0, ((sold.sellPrice - currentPrice) / sold.sellPrice) * 100);
+  }
+
+  /**
+   * Determina se a posição deve ser rolada/fechada com base em regras quantitativas.
+   */
+  getRollSignal(sold: SoldOption): RollSignal {
+    const pctCaptured = this.getProfitCaptured(sold);
+
+    // Regra 1: Alvo atingido — 50% capturado → fechar com lucro
+    if (pctCaptured >= 50 && sold.tradingDays > 5) {
+      return { shouldRoll: true, reason: `Alvo 50% atingido (${pctCaptured.toFixed(0)}%)`, severity: 'info' };
+    }
+
+    // Regra 2: DTE curto + prêmio esgotado → rolar para próximo vencimento
+    if (sold.tradingDays <= 7 && pctCaptured >= 75) {
+      return { shouldRoll: true, reason: 'Prêmio esgotado, rolar para próximo vencimento', severity: 'info' };
+    }
+
+    // Regra 3: DTE curto + prêmio significativo → gamma risk
+    if (sold.tradingDays <= 5 && pctCaptured < 50) {
+      return { shouldRoll: true, reason: 'Risco Gamma! Pouco tempo, muito prêmio restante', severity: 'danger' };
+    }
+
+    // Regra 4: BBOSI se aproximou do strike (lastro BBOSI < 3%)
+    if (sold.bbosi > 0 && sold.strike > 0) {
+      const bbosiLastro = ((sold.strike - sold.bbosi) / sold.strike) * 100;
+      if (bbosiLastro < 3 && bbosiLastro > -5) {
+        return { shouldRoll: true, reason: 'BBOSI próximo do strike — pressão compradora', severity: 'warn' };
+      }
+    }
+
+    // Regra 5: NV ficou negativo
+    if (sold.nv < 0) {
+      return { shouldRoll: true, reason: 'NV negativo — risco supera ganho', severity: 'danger' };
+    }
+
+    return { shouldRoll: false, reason: '', severity: 'info' };
   }
 
   private loadFromStorage(): SoldOption[] {

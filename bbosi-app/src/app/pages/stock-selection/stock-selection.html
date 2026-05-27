@@ -37,19 +37,23 @@
               </button>
             </div>
 
-            <!-- Alerta de ação (só quando necessário) -->
-            @if (getCardStatus(sold) !== 'safe') {
-              <div class="sold-card__alert"
-                   [class.alert--recomprar]="getCardStatus(sold) === 'recomprar'"
-                   [class.alert--rolar]="getCardStatus(sold) === 'rolar'">
-                @if (getCardStatus(sold) === 'recomprar') {
-                  <mat-icon>warning</mat-icon>
-                  <span>NV zerou — <strong>recomprar</strong></span>
-                } @else {
-                  <mat-icon>sync</mat-icon>
-                  <span>BBOSI atingiu strike — <strong>rolar</strong></span>
-                }
-              </div>
+            <!-- Alerta de ação (roll signal ou NV) -->
+            @if (getRollSignal(sold); as roll) {
+              @if (roll.shouldRoll) {
+                <div class="sold-card__alert"
+                     [class.alert--info]="roll.severity === 'info'"
+                     [class.alert--warn]="roll.severity === 'warn'"
+                     [class.alert--danger]="roll.severity === 'danger'">
+                  @if (roll.severity === 'danger') {
+                    <mat-icon>warning</mat-icon>
+                  } @else if (roll.severity === 'warn') {
+                    <mat-icon>sync</mat-icon>
+                  } @else {
+                    <mat-icon>check_circle</mat-icon>
+                  }
+                  <span>{{ roll.reason }}</span>
+                </div>
+              }
             }
 
             <!-- Barra visual: BBOSI / Cotação / Strike -->
@@ -83,11 +87,27 @@
               </div>
             </div>
 
-            <!-- Alvo de lucro -->
-            <div class="sold-card__target">
-              <span class="sold-card__target-label">Alvo recompra</span>
-              <span class="sold-card__target-value">R${{ getTarget(sold).toFixed(2) }}</span>
-              <span class="sold-card__target-gain">(lucro 80%)</span>
+            <!-- Barra de progresso do lucro -->
+            <div class="sold-card__profit">
+              <div class="profit-header">
+                <span class="profit-label">Lucro capturado</span>
+                <span class="profit-value" [class.profit--target]="getProfitCaptured(sold) >= 50">{{ getProfitCaptured(sold).toFixed(0) }}%</span>
+              </div>
+              <div class="profit-bar">
+                <div class="profit-bar__fill"
+                     [style.width.%]="Math.min(100, getProfitCaptured(sold))"
+                     [class.profit-bar--low]="getProfitCaptured(sold) < 25"
+                     [class.profit-bar--mid]="getProfitCaptured(sold) >= 25 && getProfitCaptured(sold) < 50"
+                     [class.profit-bar--target]="getProfitCaptured(sold) >= 50 && getProfitCaptured(sold) < 75"
+                     [class.profit-bar--high]="getProfitCaptured(sold) >= 75">
+                </div>
+                <div class="profit-bar__marker" style="left: 50%" matTooltip="Alvo 50%"></div>
+              </div>
+              <div class="profit-meta">
+                <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
+                <span>Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
+                <span>Alvo R${{ getTarget(sold).toFixed(2) }}</span>
+              </div>
             </div>
           </div>
         }

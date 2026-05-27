@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarketDataService } from '../../services/market-data.service';
-import { SoldOptionsService, SoldOption } from '../../services/sold-options.service';
+import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
 
@@ -20,6 +20,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   private marketData = inject(MarketDataService);
   soldOptionsService = inject(SoldOptionsService);
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+  Math = Math; // Expose Math for template
 
   stocks = signal<Stock[]>(this.marketData.getStocks());
   lastUpdated = signal<Date | null>(null);
@@ -68,11 +70,10 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   getCardStatus(sold: SoldOption): 'safe' | 'recomprar' | 'rolar' {
-    const bbosi = sold.bbosi || 0;
-    // Regra Bastter: NV <= 0 → recomprar a opção
-    if (sold.nv <= 0) return 'recomprar';
-    // Regra Bastter: BBOSI >= Strike → rolar (ação subiu demais)
-    if (bbosi > 0 && bbosi >= sold.strike) return 'rolar';
+    const roll = this.getRollSignal(sold);
+    if (roll.shouldRoll && roll.severity === 'danger') return 'recomprar';
+    if (roll.shouldRoll && roll.severity === 'warn') return 'rolar';
+    if (roll.shouldRoll && roll.severity === 'info') return 'safe'; // alvo atingido = bom
     return 'safe';
   }
 
@@ -104,6 +105,14 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   getTarget(sold: SoldOption): number {
     // Alvo: recomprar quando restar ~20% do prêmio vendido
     return sold.sellPrice * 0.20;
+  }
+
+  getProfitCaptured(sold: SoldOption): number {
+    return this.soldOptionsService.getProfitCaptured(sold);
+  }
+
+  getRollSignal(sold: SoldOption): RollSignal {
+    return this.soldOptionsService.getRollSignal(sold);
   }
 
   getNvBarWidth(nv: number): number {
