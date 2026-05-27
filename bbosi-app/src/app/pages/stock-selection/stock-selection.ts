@@ -100,16 +100,17 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   getMarkerPosition(value: number, sold: SoldOption): number {
-    // Preço da ação sempre no centro (50%)
     const price = sold.stockPrice;
     if (price <= 0) return 50;
+
+    // Preço da ação sempre centralizado (50%). Escala simétrica baseada na maior distância.
     const bbosi = sold.bbosi || price;
     const maxDist = Math.max(
       Math.abs(sold.strike - price),
       Math.abs(bbosi - price),
-      price * 0.01 // mínimo 1% para evitar divisão por zero
+      price * 0.02
     );
-    const pos = 50 + ((value - price) / maxDist) * 50;
+    const pos = 50 + ((value - price) / maxDist) * 45;
     return Math.max(0, Math.min(100, pos));
   }
 
