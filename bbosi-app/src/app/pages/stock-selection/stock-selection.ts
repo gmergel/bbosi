@@ -77,25 +77,45 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return 'safe';
   }
 
-  getBbosiBarWidth(sold: SoldOption): number {
-    if (sold.strike === 0 || !sold.bbosi) return 0;
-    const ratio = (sold.bbosi / sold.strike) * 100;
-    return Math.min(ratio, 100);
+  getBarFillLeft(sold: SoldOption): number {
+    const bbosi = sold.bbosi || 0;
+    if (!bbosi) return this.getMarkerPosition(sold.stockPrice, sold);
+    const left = Math.min(sold.stockPrice, bbosi);
+    return this.getMarkerPosition(left, sold);
+  }
+
+  getBarFillWidth(sold: SoldOption): number {
+    const bbosi = sold.bbosi || 0;
+    if (!bbosi) return 0;
+    const left = Math.min(sold.stockPrice, bbosi);
+    const right = Math.max(sold.stockPrice, bbosi);
+    const leftPos = this.getMarkerPosition(left, sold);
+    const rightPos = this.getMarkerPosition(right, sold);
+    return Math.max(2, rightPos - leftPos);
+  }
+
+  getBarLastro(sold: SoldOption): number {
+    if (!sold.bbosi || sold.strike === 0) return 100;
+    return ((sold.strike - sold.bbosi) / sold.strike) * 100;
   }
 
   getMarkerPosition(value: number, sold: SoldOption): number {
-    const bbosi = sold.bbosi || sold.stockPrice;
-    const minVal = Math.min(sold.stockPrice, sold.strike, bbosi);
-    const minRef = minVal * 0.95; // inicia 5% abaixo do menor valor
-    const max = Math.max(sold.stockPrice, sold.strike, bbosi);
-    if (max <= minRef) return 100;
-    const pos = ((value - minRef) / (max - minRef)) * 100;
+    // Preço da ação sempre no centro (50%)
+    const price = sold.stockPrice;
+    if (price <= 0) return 50;
+    const bbosi = sold.bbosi || price;
+    const maxDist = Math.max(
+      Math.abs(sold.strike - price),
+      Math.abs(bbosi - price),
+      price * 0.01 // mínimo 1% para evitar divisão por zero
+    );
+    const pos = 50 + ((value - price) / maxDist) * 50;
     return Math.max(0, Math.min(100, pos));
   }
 
   getBarLabels(sold: SoldOption): { label: string; value: number; type: string }[] {
     const items = [
-      { label: `BBOSI ${(sold.bbosi || 0).toFixed(2)}`, value: sold.bbosi || 0, type: 'bbosi' },
+      { label: `GerBOSI ${(sold.bbosi || 0).toFixed(2)}`, value: sold.bbosi || 0, type: 'bbosi' },
       { label: `Ação ${sold.stockPrice.toFixed(2)}`, value: sold.stockPrice, type: 'price' },
       { label: `Strike ${sold.strike.toFixed(2)}`, value: sold.strike, type: 'strike' },
     ];
@@ -103,8 +123,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   getTarget(sold: SoldOption): number {
-    // Alvo: recomprar quando restar ~20% do prêmio vendido
-    return sold.sellPrice * 0.20;
+    // Alvo: recomprar quando capturar 50% do prêmio vendido
+    return sold.sellPrice * 0.50;
   }
 
   getProfitCaptured(sold: SoldOption): number {

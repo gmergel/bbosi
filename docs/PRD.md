@@ -1,8 +1,8 @@
-# PRD - BBOSI App
+# PRD - GerBOSI App
 
 ## Visão Geral
 
-Aplicação web simples em **Angular** para análise de opções de venda coberta, calculando os indicadores BBOSI (VDX, VDXX, BOSI, BBOSI, NV) para auxiliar o investidor na escolha da melhor opção para vender.
+Aplicação web simples em **Angular** para análise de opções de venda coberta, calculando os indicadores GerBOSI (VDX, VDXX, BOSI, GerBOSI, NV) para auxiliar o investidor na escolha da melhor opção para vender.
 
 ---
 
@@ -59,13 +59,13 @@ Exibe as opções de compra (calls) disponíveis para a ação selecionada.
 | NV | Indicador NV (VE - Delta - Gama) |
 | VDX | Índice de eficiência da venda |
 | VDXX | VDX Estendido |
-| BOSI | Bastter Options Strength Index |
+| BOSI | Germano Options Strength Index |
 | Neg% | Percentual de negócios da série |
 
 **Cabeçalho da tela:**
 - Nome e ticker da ação selecionada
 - Preço atual da ação
-- **BBOSI** da série (calculado e exibido em destaque)
+- **GerBOSI** da série (calculado e exibido em destaque)
 - Botão para voltar à tela de seleção
 
 **Comportamento:**
@@ -92,9 +92,9 @@ Se NV < 0 → marcar como "Não Venda"
 BOSI = VE × %NumNeg
 ```
 
-**BBOSI:**
+**GerBOSI:**
 ```
-BBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
+GerBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
 ```
 
 **VDXX:**

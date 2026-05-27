@@ -388,7 +388,7 @@
   opacity: 0.7;
 }
 
-// Barra visual BBOSI → Strike
+// Barra visual Preço → GerBOSI
 .bar-scale__track {
   position: relative;
   height: 14px;
@@ -400,10 +400,9 @@
 .bar-scale__fill {
   position: absolute;
   top: 0;
-  left: 0;
   height: 100%;
   border-radius: 0;
-  transition: width 0.3s ease;
+  transition: left 0.3s ease, width 0.3s ease;
 
   &.bar--safe {
     background: linear-gradient(90deg, #0f766e, #16a34a);

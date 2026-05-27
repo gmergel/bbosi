@@ -1,10 +1,10 @@
-# BBOSI — Documentação Completa
+# GerBOSI — Documentação Completa
 
 ## Visão Geral
 
-O **BBOSI** é um aplicativo Angular para análise de **venda coberta de opções** (Covered Call Writing) no mercado brasileiro. Combina os indicadores clássicos do método Bastter.com com melhorias quantitativas baseadas em literatura acadêmica, oferecendo:
+O **GerBOSI** é um aplicativo Angular para análise de **venda coberta de opções** (Covered Call Writing) no mercado brasileiro. Combina indicadores clássicos de venda coberta com melhorias quantitativas baseadas em literatura acadêmica, oferecendo:
 
-- Cálculo automático de indicadores (NV, VDX, VDXX, BOSI, BBOSI)
+- Cálculo automático de indicadores (NV, VDX, VDXX, BOSI, GerBOSI)
 - Filtros inteligentes com 10 regras de elegibilidade
 - Monitoramento em tempo real de opções vendidas
 - Sinais de saída quantitativos (Roll Signals)
@@ -44,7 +44,7 @@ Em produção (GitHub Pages), ambas passam por `corsproxy.io` para contornar COR
 
 ---
 
-## Indicadores Clássicos (Método Bastter)
+## Indicadores Clássicos
 
 ### 1. NV (Não Venda)
 
@@ -102,7 +102,7 @@ VDXX = Lastro% × (NV / Cotação) × 50 × FatorTempo × DeltaScore
 
 ---
 
-### 4. BOSI (Bastter Options Strength Index)
+### 4. BOSI (Germano Options Strength Index)
 
 Indica onde está a **força do mercado de opções**:
 
@@ -115,15 +115,15 @@ BOSI = VE × %NumNeg
 
 ---
 
-### 5. BBOSI (Bastter BOSI consolidado)
+### 5. GerBOSI (Germano BOSI consolidado)
 
 **Média ponderada dos strikes**, usando BOSI como peso:
 
 ```
-BBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
+GerBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
 ```
 
-Representa o **"centro de massa"** do mercado de opções. Usado como referência de stop: quando o BBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
+Representa o **“centro de massa”** do mercado de opções. Usado como referência de stop: quando o GerBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
 
 ---
 
@@ -139,12 +139,12 @@ O app aplica **10 regras** sequenciais para determinar se uma opção pode ser v
 | 4 | Prazo mínimo | ≥ 10 dias úteis | Pouco tempo = gamma risk |
 | 5 | Prazo máximo | ≤ 45 dias úteis | Theta decai pouco longe do vencimento |
 | 6 | VE positivo | VE > 0 | Sem VE não há o que vender |
-| 7 | NV positivo | VE - Delta - Gama > 0 | Regra principal Bastter |
+| 7 | NV positivo | VE - Delta - Gama > 0 | Regra principal |
 | 8 | Delta na faixa | 0.05 ≤ Delta ≤ 0.40 | Zona do lançador coberto |
 | 9 | Taxa mínima | ≥ 6% a.a. anualizada | Retorno mínimo que justifica o risco |
 | 10 | IV não extrema | IV ≤ 150% | IV absurda indica evento extremo |
 
-**Liquidez (média 5 pregões):** O filtro usa a média de negócios dos últimos 5 dias (armazenados no localStorage) para evitar falsos positivos de dias atípicos. O BOSI continua usando os trades do dia (fiel ao Bastter).
+**Liquidez (média 5 pregões):** O filtro usa a média de negócios dos últimos 5 dias (armazenados no localStorage) para evitar falsos positivos de dias atípicos. O BOSI continua usando os trades do dia.
 
 ---
 
@@ -230,7 +230,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | 1 | Alvo atingido | % Capturado ≥ 50% E DTE > 5 | 🟢 Info | Fechar com lucro |
 | 2 | Prêmio esgotado | DTE ≤ 7 E % Capturado ≥ 75% | 🟢 Info | Rolar para próximo vencimento |
 | 3 | Gamma Risk | DTE ≤ 5 E % Capturado < 50% | 🔴 Danger | Fechar imediatamente |
-| 4 | BBOSI pressão | (Strike - BBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
+| 4 | GerBOSI pressão | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
 | 5 | NV negativo | NV < 0 | 🔴 Danger | Recomprar |
 
 **Gamma Risk explicado:** Nas últimas 5 sessões antes do vencimento, o gamma é máximo. Se a opção ainda tem prêmio significativo (< 50% capturado), qualquer movimento do ativo contra a posição pode transformar lucro em prejuízo rapidamente. É a zona mais perigosa para o vendedor.
@@ -246,7 +246,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 - Meta: ação · dias restantes · preço atual · timestamp
 - NV badge (colorido por status)
 - Alert banner (roll signal com severidade)
-- Barra visual BBOSI/Preço/Strike com marcadores
+- Barra visual GerBOSI/Preço/Strike com marcadores
 - Barra de progresso de lucro (com alvo 50%)
 
 **Cards de ações:**
@@ -257,7 +257,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 ### Tela de Opções (Options List)
 
 **Header:**
-- Preço da ação + BBOSI da série
+- Preço da ação + GerBOSI da série
 
 **Banners informativos:**
 - Vol Regime (se ≠ normal)
@@ -288,13 +288,13 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 │    • Preço da opção atualiza live                       │
 │    • Barra de lucro % avança                            │
 │    • NV recalcula continuamente                         │
-│    • BBOSI monitora pressão compradora                  │
+│    • GerBOSI monitora pressão compradora                  │
 │    • Roll Signals avaliam 5 regras a cada refresh       │
 ├─────────────────────────────────────────────────────────┤
 │ 3. SAÍDA (disparada por Roll Signal)                    │
 │    • 🟢 Alvo 50% → fechar, reabrir nova se VDXX bom   │
 │    • 🟢 Prêmio esgotado → rolar para próximo vcto     │
-│    • 🟡 BBOSI próximo → rolar ou reduzir               │
+│    • 🟡 GerBOSI próximo → rolar ou reduzir               │
 │    • 🔴 Gamma Risk → fechar imediatamente              │
 │    • 🔴 NV negativo → recomprar                        │
 │    • Remover card → operação encerrada                  │
@@ -344,13 +344,12 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 
 ## Referências
 
-### Método Bastter (Base)
-- Livro "Introdução às Opções" — Maurício Hissa (Bastter)
-- Livro "Operando Opções" — Maurício Hissa (Bastter)
-- Apostila "Venda Coberta para Remuneração" — Bastter.com
-- Curso Bastter Blue — Introdução às Opções
-- Manual "Nunca Foi Tão Fácil Fazer Venda Coberta" — Bastter Blue
-- Fóruns Bastter.com (discussões sobre VDXX, BBOSI)
+### Referências Bibliográficas (Base)
+- Livro “Introdução às Opções” — Maurício Hissa
+- Livro “Operando Opções” — Maurício Hissa
+- Apostila “Venda Coberta para Remuneração”
+- Manual “Nunca Foi Tão Fácil Fazer Venda Coberta”
+- Fóruns e discussões sobre VDXX, BOSI
 
 ### Literatura Acadêmica (Melhorias)
 - Israelov & Nielsen (2015) — "Covered Calls Uncovered"

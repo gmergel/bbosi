@@ -169,11 +169,11 @@ export class SoldOptionsService {
       return { shouldRoll: true, reason: 'Risco Gamma! Pouco tempo, muito prêmio restante', severity: 'danger' };
     }
 
-    // Regra 4: BBOSI se aproximou do strike (lastro BBOSI < 3%)
+    // Regra 4: GerBOSI se aproximou do strike (lastro GerBOSI < 3%)
     if (sold.bbosi > 0 && sold.strike > 0) {
       const bbosiLastro = ((sold.strike - sold.bbosi) / sold.strike) * 100;
       if (bbosiLastro < 3 && bbosiLastro > -5) {
-        return { shouldRoll: true, reason: 'BBOSI próximo do strike — pressão compradora', severity: 'warn' };
+        return { shouldRoll: true, reason: 'GerBOSI próximo do strike — pressão compradora', severity: 'warn' };
       }
     }
 

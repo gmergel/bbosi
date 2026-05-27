@@ -7,7 +7,7 @@ import { IvHistoryService } from './iv-history.service';
 export type VolRegime = 'low' | 'normal' | 'high' | 'extreme';
 
 /**
- * Regras do Bastter.com para Venda Coberta:
+ * Regras de Elegibilidade para Venda Coberta:
  *
  * 1. APENAS OTM ou levemente ATM (lastro >= -2%)
  * 2. SEM POZINHOS: preço mínimo > R$0.05
@@ -25,7 +25,7 @@ export class IndicatorService {
   private liquidityHistory = inject(LiquidityHistoryService);
   private ivHistory = inject(IvHistoryService);
 
-  // Constantes das regras Bastter
+  // Constantes das regras de elegibilidade
   private readonly MIN_PRICE = 0.05;          // Sem pozinhos
   private readonly MIN_TRADES = 50;           // Mínimo negócios (liquidez)
   private readonly MIN_DELTA = 0.05;          // Delta mínimo útil
@@ -38,7 +38,7 @@ export class IndicatorService {
 
   /**
    * Calcula indicadores usando gregas vindas da API (opcoes.net.br)
-   * e aplica todas as regras do Bastter para classificação.
+   * e aplica todas as regras de elegibilidade para classificação.
    */
   calculateFromApi(options: OptionWithGreeks[], stockPrice: number, stockTicker?: string): OptionIndicators[] {
     if (stockPrice <= 0) return [];
@@ -81,15 +81,15 @@ export class IndicatorService {
       ? (ve / stockPrice) * (252 / option.tradingDays) * 100
       : 0;
 
-    // VDXX: indicador composto do Bastter (com delta score)
+    // VDXX: indicador composto (com delta score)
     const vdx = option.price > 0 ? (nv / option.price) * 100 : 0;
     const vdxx = this.calcVDXX(lastroPercent, nv, option.price, option.tradingDays, delta);
     const bosi = ve * tradePercent;
 
-    // === REGRAS DO BASTTER: determina se pode vender ===
+    // === REGRAS DE ELEGIBILIDADE: determina se pode vender ===
     // Usa média de liquidez (5 pregões) para o filtro, trades do dia para BOSI
     const avgTrades = this.liquidityHistory.getAverageTrades(option.ticker, option.trades);
-    const { noSell, noSellReason } = this.applyBastterRules(
+    const { noSell, noSellReason } = this.applyEligibilityRules(
       option, ve, lastroPercent, delta, nv, taxaAnual, impliedVol, avgTrades
     );
 
@@ -120,9 +120,9 @@ export class IndicatorService {
   }
 
   /**
-   * Aplica as regras do Bastter e retorna se deve ou não vender + motivo.
+   * Aplica as regras de elegibilidade e retorna se deve ou não vender + motivo.
    */
-  private applyBastterRules(
+  private applyEligibilityRules(
     option: OptionWithGreeks,
     ve: number,
     lastroPercent: number,
@@ -160,7 +160,7 @@ export class IndicatorService {
       return { noSell: true, noSellReason: 'VE zero ou negativo' };
     }
 
-    // Regra 5: NV positivo (regra principal Bastter)
+    // Regra 5: NV positivo (regra principal)
     if (nv < 0) {
       return { noSell: true, noSellReason: 'NV negativo (Delta+Gama > VE)' };
     }
@@ -187,7 +187,7 @@ export class IndicatorService {
   }
 
   calculateBBOSI(indicators: OptionIndicators[]): number {
-    // BBOSI usa TODAS as opções com BOSI > 0 (mede força do mercado, não filtra por vendabilidade)
+    // GerBOSI usa TODAS as opções com BOSI > 0 (mede força do mercado, não filtra por vendabilidade)
     const validOptions = indicators.filter(o => o.bosi > 0);
     const sumStrikeBosi = validOptions.reduce((sum, o) => sum + o.strike * o.bosi, 0);
     const sumBosi = validOptions.reduce((sum, o) => sum + o.bosi, 0);

@@ -56,15 +56,16 @@
               }
             }
 
-            <!-- Barra visual: BBOSI / Cotação / Strike -->
+            <!-- Barra visual: GerBOSI / Cotação / Strike -->
             <div class="sold-card__bar-section">
               <div class="bar-scale">
                 <div class="bar-scale__track">
                   <div class="bar-scale__fill"
-                       [style.width.%]="getMarkerPosition(sold.bbosi || 0, sold)"
-                       [class.bar--safe]="(sold.bbosi || 0) < sold.strike * 0.90"
-                       [class.bar--warn]="(sold.bbosi || 0) >= sold.strike * 0.90 && (sold.bbosi || 0) < sold.strike"
-                       [class.bar--danger]="(sold.bbosi || 0) >= sold.strike">
+                       [style.left.%]="getBarFillLeft(sold)"
+                       [style.width.%]="getBarFillWidth(sold)"
+                       [class.bar--safe]="getBarLastro(sold) > 10"
+                       [class.bar--warn]="getBarLastro(sold) > 3 && getBarLastro(sold) <= 10"
+                       [class.bar--danger]="getBarLastro(sold) <= 3">
                   </div>
                   <div class="bar-scale__marker bar-scale__marker--price"
                        [style.left.%]="getMarkerPosition(sold.stockPrice, sold)"
@@ -72,7 +73,7 @@
                   </div>
                   <div class="bar-scale__marker bar-scale__marker--bbosi"
                        [style.left.%]="getMarkerPosition(sold.bbosi || 0, sold)"
-                       matTooltip="BBOSI R${{ (sold.bbosi || 0).toFixed(2) }}">
+                       matTooltip="GerBOSI R${{ (sold.bbosi || 0).toFixed(2) }}">
                   </div>
                   <div class="bar-scale__marker bar-scale__marker--strike"
                        style="left: 100%"
