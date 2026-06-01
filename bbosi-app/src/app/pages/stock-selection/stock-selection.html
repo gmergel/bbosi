@@ -10,6 +10,7 @@
         @for (sold of soldOptionsService.soldOptions(); track sold.optionTicker) {
           <div class="sold-card glass"
                [class.sold-card--safe]="getCardStatus(sold) === 'safe'"
+               [class.sold-card--alvo]="getCardStatus(sold) === 'alvo'"
                [class.sold-card--recomprar]="getCardStatus(sold) === 'recomprar'"
                [class.sold-card--rolar]="getCardStatus(sold) === 'rolar'"
                >
@@ -37,19 +38,16 @@
               </button>
             </div>
 
-            <!-- Alerta de ação (roll signal ou NV) -->
+            <!-- Alerta de ação (roll signal - apenas warn/danger) -->
             @if (getRollSignal(sold); as roll) {
-              @if (roll.shouldRoll) {
+              @if (roll.shouldRoll && roll.severity !== 'info') {
                 <div class="sold-card__alert"
-                     [class.alert--info]="roll.severity === 'info'"
                      [class.alert--warn]="roll.severity === 'warn'"
                      [class.alert--danger]="roll.severity === 'danger'">
                   @if (roll.severity === 'danger') {
                     <mat-icon>warning</mat-icon>
-                  } @else if (roll.severity === 'warn') {
-                    <mat-icon>sync</mat-icon>
                   } @else {
-                    <mat-icon>check_circle</mat-icon>
+                    <mat-icon>sync</mat-icon>
                   }
                   <span>{{ roll.reason }}</span>
                 </div>

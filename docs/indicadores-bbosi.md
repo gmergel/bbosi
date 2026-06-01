@@ -323,6 +323,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | BBDC4 | Bradesco |
 | BBSE3 | BB Seguridade |
 | ITUB4 | Itaú Unibanco |
+| KLBN4 | Klabin |
 | PETR4 | Petrobras |
 | VALE3 | Vale |
 

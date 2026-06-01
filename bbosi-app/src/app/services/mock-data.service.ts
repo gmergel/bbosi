@@ -14,6 +14,7 @@ export class MockDataService {
   private stockPrices: Record<string, number> = {
     BBAS3: 28.45,
     BBDC4: 13.72,
+    KLBN4: 21.65,
     PETR4: 37.88,
     VALE3: 58.30,
   };
@@ -58,6 +59,7 @@ export class MockDataService {
     const names: Record<string, string> = {
       BBAS3: 'Banco do Brasil',
       BBDC4: 'Bradesco',
+      KLBN4: 'Klabin',
       PETR4: 'Petrobras',
       VALE3: 'Vale',
     };

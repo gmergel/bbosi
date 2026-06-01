@@ -69,11 +69,11 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return this.soldOptionsService.getNvColor(nv);
   }
 
-  getCardStatus(sold: SoldOption): 'safe' | 'recomprar' | 'rolar' {
+  getCardStatus(sold: SoldOption): 'safe' | 'alvo' | 'recomprar' | 'rolar' {
     const roll = this.getRollSignal(sold);
     if (roll.shouldRoll && roll.severity === 'danger') return 'recomprar';
     if (roll.shouldRoll && roll.severity === 'warn') return 'rolar';
-    if (roll.shouldRoll && roll.severity === 'info') return 'safe'; // alvo atingido = bom
+    if (roll.shouldRoll && roll.severity === 'info') return 'alvo';
     return 'safe';
   }
 

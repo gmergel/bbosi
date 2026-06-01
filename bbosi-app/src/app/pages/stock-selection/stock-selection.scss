@@ -185,14 +185,22 @@
     border-left-color: #16a34a;
   }
 
+  &--alvo {
+    border-left-color: #4fd1c5;
+    background: linear-gradient(135deg, rgba(79, 209, 197, 0.22) 0%, rgba(15, 118, 110, 0.18) 100%) !important;
+    box-shadow: inset 0 0 0 1px rgba(79, 209, 197, 0.4), 0 0 16px rgba(79, 209, 197, 0.15);
+  }
+
   &--recomprar {
-    border-left-color: #fbbf24;
-    background: rgba(251, 191, 36, 0.05) !important;
+    border-left-color: #dc2626;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.20) 0%, rgba(153, 27, 27, 0.16) 100%) !important;
+    box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.4), 0 0 16px rgba(220, 38, 38, 0.12);
   }
 
   &--rolar {
-    border-left-color: #dc2626;
-    background: rgba(220, 38, 38, 0.06) !important;
+    border-left-color: #fbbf24;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.18) 0%, rgba(202, 138, 4, 0.14) 100%) !important;
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35), 0 0 16px rgba(251, 191, 36, 0.10);
   }
 }
 

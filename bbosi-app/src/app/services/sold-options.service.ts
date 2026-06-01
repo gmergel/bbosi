@@ -153,6 +153,12 @@ export class SoldOptionsService {
    */
   getRollSignal(sold: SoldOption): RollSignal {
     const pctCaptured = this.getProfitCaptured(sold);
+    const currentPrice = sold.optionPrice ?? sold.sellPrice;
+
+    // Regra 0: Opção em pó — recomprar e rolar para próxima série
+    if (currentPrice <= 0.05 && sold.tradingDays > 5) {
+      return { shouldRoll: true, reason: 'Em pó — recomprar e rolar', severity: 'info' };
+    }
 
     // Regra 1: Alvo atingido — 50% capturado → fechar com lucro
     if (pctCaptured >= 50 && sold.tradingDays > 5) {
