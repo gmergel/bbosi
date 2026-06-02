@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, forkJoin, of, catchError, switchMap } from 'rxjs';
+import { Observable, map, forkJoin, of, catchError, switchMap, throwError, timeout } from 'rxjs';
 import { Stock, OptionData } from '../models/stock.model';
 import { MockDataService } from './mock-data.service';
 import { environment } from '../../environments/environment';
@@ -39,6 +39,8 @@ export interface OptionWithGreeks extends OptionData {
 export class MarketDataService {
   private http = inject(HttpClient);
   private mock = inject(MockDataService);
+  private yahooBaseUrls = this.getBaseUrls('yahoo');
+  private opcoesBaseUrls = this.getBaseUrls('opcoes');
 
   private stocks: Stock[] = [
     { ticker: 'BBAS3', name: 'Banco do Brasil', price: 0 },
@@ -61,8 +63,10 @@ export class MarketDataService {
   fetchStockPrice(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
     const yahooTicker = `${ticker}.SA`;
 
-    return this.http
-      .get<any>(`${environment.yahooBaseUrl}/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
+    return this.getWithFallback<any>(
+      this.yahooBaseUrls,
+      `/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`
+    )
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
@@ -99,9 +103,9 @@ export class MarketDataService {
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
     const z = Math.floor(Date.now() / 10000);
-    const url = `${environment.opcoesBaseUrl}/api/v1?z=${z}&r0t=OptionsChain&r0p.underlying_asset_id=${ticker}`;
+    const path = `/api/v1?z=${z}&r0t=OptionsChain&r0p.underlying_asset_id=${ticker}`;
 
-    return this.http.get<OptionsChainResponse>(url).pipe(
+    return this.getWithFallback<OptionsChainResponse>(this.opcoesBaseUrls, path).pipe(
       map(res => this.parseOptionsChain(res, ticker)),
       map(options => {
         if (options.length > 0) {
@@ -162,8 +166,10 @@ export class MarketDataService {
     };
 
     const yahooTicker = `${ticker}.SA`;
-    const priceSource$ = this.http
-      .get<any>(`${environment.yahooBaseUrl}/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`)
+    const priceSource$ = this.getWithFallback<any>(
+      this.yahooBaseUrls,
+      `/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`
+    )
       .pipe(
         map(res => {
           const meta = res?.chart?.result?.[0]?.meta;
@@ -216,6 +222,36 @@ export class MarketDataService {
         };
       })
     );
+  }
+
+  private getWithFallback<T>(baseUrls: string[], path: string, attempt = 0): Observable<T> {
+    const base = baseUrls[attempt];
+    if (!base) {
+      return throwError(() => new Error('Nenhum endpoint de proxy configurado'));
+    }
+
+    return this.http.get<T>(`${base}${path}`).pipe(
+      timeout(10000),
+      catchError(err => {
+        if (attempt < baseUrls.length - 1) {
+          return this.getWithFallback<T>(baseUrls, path, attempt + 1);
+        }
+        return throwError(() => err);
+      })
+    );
+  }
+
+  private getBaseUrls(kind: 'yahoo' | 'opcoes'): string[] {
+    const legacy = kind === 'yahoo' ? environment.yahooBaseUrl : environment.opcoesBaseUrl;
+    const list = kind === 'yahoo'
+      ? (environment as any).yahooBaseUrls
+      : (environment as any).opcoesBaseUrls;
+
+    const normalized = Array.isArray(list) ? list : [];
+    if (legacy && !normalized.includes(legacy)) {
+      return [legacy, ...normalized];
+    }
+    return normalized;
   }
 
   /**
