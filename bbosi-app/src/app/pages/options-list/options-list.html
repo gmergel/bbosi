@@ -116,6 +116,25 @@
       <span class="options-count">{{ options().length }} opcoes</span>
     </div>
 
+    <!-- Busca por serie -->
+    <div class="search-bar">
+      <mat-icon class="search-bar__icon">search</mat-icon>
+      <input
+        class="search-bar__input"
+        type="text"
+        placeholder="Buscar serie... ex: F956"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      @if (searchQuery()) {
+        <button class="search-bar__clear" (click)="searchQuery.set('')" aria-label="Limpar busca">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
     <!-- Tabela principal: limpa e focada -->
     <div class="table-wrapper">
       @for (option of options(); track option.ticker; let i = $index) {

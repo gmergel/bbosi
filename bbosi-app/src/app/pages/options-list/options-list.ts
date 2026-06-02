@@ -51,12 +51,22 @@ export class OptionsListComponent implements OnInit {
   ivPercentile = signal<number>(-1);
   ivCurrent = signal<number>(0);
   ivDays = signal<number>(0);
+  searchQuery = signal<string>('');
 
   /** Opções filtradas e ordenadas por VDXX decrescente */
   options = computed(() => {
     let data = this.allOptions();
     if (!this.showNoSell()) {
       data = data.filter(o => !o.noSell);
+    }
+    const query = this.searchQuery().trim().toUpperCase();
+    if (query) {
+      // Remove dígitos finais do ticker da ação (ex: VALE3 → VALE) para obter o prefixo correto das opções
+      const stockBase = (this.stock()?.ticker ?? '').replace(/\d+$/, '').toUpperCase();
+      data = data.filter(o => {
+        const serie = o.ticker.toUpperCase().slice(stockBase.length);
+        return serie.includes(query);
+      });
     }
     return [...data].sort((a, b) => b.vdxx - a.vdxx);
   });
