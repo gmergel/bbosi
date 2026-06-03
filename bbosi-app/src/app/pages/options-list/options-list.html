@@ -71,14 +71,23 @@
     </div>
   }
 
-  @if (!loading() && isMock()) {
+  @if (!loading() && dataState() === 'mock') {
     <div class="mock-banner">
       <mat-icon>info</mat-icon>
       <span>Dados simulados — mercado fechado ou sem resposta do opcoes.net.br. Dados reais disponiveis em dias uteis das 10h as 17h.</span>
     </div>
   }
 
-  @if (!loading() && allOptions().length === 0) {
+  @if (!loading() && dataState() === 'error') {
+    <div class="empty-state">
+      <mat-icon class="empty-state__icon">wifi_off</mat-icon>
+      <h2>Falha ao carregar dados</h2>
+      <p>{{ loadError() }}</p>
+      <button mat-flat-button color="primary" (click)="retryLoad()">Tentar novamente</button>
+    </div>
+  }
+
+  @if (!loading() && dataState() === 'empty') {
     <div class="empty-state">
       <mat-icon class="empty-state__icon">schedule</mat-icon>
       <h2>Dados indisponiveis</h2>
@@ -87,7 +96,7 @@
     </div>
   }
 
-  @if (!loading() && allOptions().length > 0) {
+  @if (!loading() && (dataState() === 'ready' || dataState() === 'mock')) {
     <!-- Card destaque: melhor opcao -->
     @if (bestOption(); as best) {
       <section class="best-pick">
@@ -140,7 +149,12 @@
       @for (option of options(); track option.ticker; let i = $index) {
         <div class="option-row" [class.option-row--no-sell]="option.noSell"
              [class.option-row--expanded]="expandedRow() === option.ticker"
-             (click)="toggleRow(option.ticker)">
+             role="button"
+             tabindex="0"
+             [attr.aria-expanded]="expandedRow() === option.ticker"
+             [attr.aria-label]="'Expandir detalhes da opcao ' + option.ticker"
+             (click)="toggleRow(option.ticker)"
+             (keydown)="onOptionRowKeydown($event, option.ticker)">
 
           <!-- Linha principal -->
           <div class="option-row__main">
@@ -186,12 +200,28 @@
               }
               <div class="detail-grid">
                 <div class="detail-item">
-                  <span class="detail-label">Cotacao</span>
-                  <span class="detail-value">R$ {{ option.price.toFixed(2) }}</span>
+                  <span class="detail-label">Lastro</span>
+                  <span class="detail-value" [class.text-success]="option.lastroPercent >= 0" [class.text-danger]="option.lastroPercent < -2">{{ option.lastroPercent.toFixed(1) }}%</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">Taxa a.a.</span>
                   <span class="detail-value" [class.text-success]="option.taxaAnual >= 12" [class.text-danger]="option.taxaAnual < 6">{{ option.taxaAnual.toFixed(1) }}%</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">VDXX</span>
+                  <span class="detail-value" [class]="getVdxxClass(option.vdxx)">{{ option.vdxx.toFixed(1) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">VE</span>
+                  <span class="detail-value">R$ {{ option.ve.toFixed(2) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Cotacao</span>
+                  <span class="detail-value">R$ {{ option.price.toFixed(2) }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Premio/Acao</span>
+                  <span class="detail-value">{{ option.premiumPercent.toFixed(2) }}%</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">NV</span>
@@ -202,20 +232,20 @@
                   <span class="detail-value">{{ option.delta.toFixed(4) }}</span>
                 </div>
                 <div class="detail-item">
-                  <span class="detail-label">Gama</span>
-                  <span class="detail-value">{{ option.gama.toFixed(4) }}</span>
+                  <span class="detail-label">IV</span>
+                  <span class="detail-value">{{ (option.impliedVol * 100).toFixed(1) }}%</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">Theta</span>
                   <span class="detail-value">{{ option.theta.toFixed(4) }}</span>
                 </div>
                 <div class="detail-item">
-                  <span class="detail-label">IV</span>
-                  <span class="detail-value">{{ (option.impliedVol * 100).toFixed(1) }}%</span>
+                  <span class="detail-label">Gama</span>
+                  <span class="detail-value">{{ option.gama.toFixed(4) }}</span>
                 </div>
                 <div class="detail-item">
-                  <span class="detail-label">Premio/Acao</span>
-                  <span class="detail-value">{{ option.premiumPercent.toFixed(2) }}%</span>
+                  <span class="detail-label">Vencimento</span>
+                  <span class="detail-value">{{ option.expiration | date:'dd/MM/yyyy' }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">VDX</span>
@@ -228,10 +258,6 @@
                 <div class="detail-item">
                   <span class="detail-label">Neg%</span>
                   <span class="detail-value">{{ option.tradePercent.toFixed(2) }}%</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">Vencimento</span>
-                  <span class="detail-value">{{ option.expiration | date:'dd/MM/yyyy' }}</span>
                 </div>
               </div>
               <div class="detail-actions">

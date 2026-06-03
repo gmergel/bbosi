@@ -41,6 +41,8 @@ export class MarketDataService {
   private mock = inject(MockDataService);
   private yahooBaseUrls = this.getBaseUrls('yahoo');
   private opcoesBaseUrls = this.getBaseUrls('opcoes');
+  private readonly OPTIONS_CACHE_TTL_MS = 30 * 60 * 1000;
+  private readonly PRICE_CACHE_TTL_MS = 15 * 60 * 1000;
 
   private stocks: Stock[] = [
     { ticker: 'BBAS3', name: 'Banco do Brasil', price: 0 },
@@ -131,7 +133,8 @@ export class MarketDataService {
     try {
       const raw = localStorage.getItem(`bbosi-options-${ticker}`);
       if (!raw) return [];
-      const { options } = JSON.parse(raw);
+      const { options, timestamp } = JSON.parse(raw);
+      if (this.isCacheExpired(timestamp, this.OPTIONS_CACHE_TTL_MS)) return [];
       return (options || []).map((o: any) => ({
         ...o,
         expiration: new Date(o.expiration),
@@ -149,10 +152,17 @@ export class MarketDataService {
     try {
       const raw = localStorage.getItem(`bbosi-price-${ticker}`);
       if (!raw) return 0;
-      return JSON.parse(raw).price || 0;
+      const { price, timestamp } = JSON.parse(raw);
+      if (this.isCacheExpired(timestamp, this.PRICE_CACHE_TTL_MS)) return 0;
+      return price || 0;
     } catch {
       return 0;
     }
+  }
+
+  private isCacheExpired(timestamp: number | undefined, ttlMs: number): boolean {
+    if (!timestamp || timestamp <= 0) return true;
+    return Date.now() - timestamp > ttlMs;
   }
 
   /**
@@ -256,39 +266,29 @@ export class MarketDataService {
 
   /**
    * Infere o preço da ação a partir dos dados das opções.
-   * Método principal: usa "Prêmio como % da cotação" (row[7]):
-   *   cotação = último / (prêmio% / 100)
-   * Fallback: usa "Distância % do Strike":
+   * Método principal: usa "Distância % do Strike":
    *   cotação = strike / (1 + distância% / 100)
+   * Fallback: ATM ou delta mais próximo de 0.5.
    */
   private inferPriceFromOptions(options: OptionWithGreeks[]): number {
-    // Método 1: usar premiumPercent (mais confiável)
-    const withPremium = options.filter(o => o.premiumPercent > 0 && o.price > 0);
-    if (withPremium.length > 0) {
-      // Usa a opção ATM ou a com maior liquidez para precisão
-      const atm = withPremium.find(o => o.moneyness === 'ATM');
-      const refOption = atm || withPremium.reduce((best, o) =>
-        (o.volume || 0) > (best.volume || 0) ? o : best
-      );
-      const inferred = refOption.price / (refOption.premiumPercent / 100);
-      return inferred;
-    }
-
-    // Método 2: usar distancePercent
+    // Método 1: usar distancePercent
     const withDistance = options.filter(o => o.distancePercent !== 0);
     if (withDistance.length > 0) {
       const sorted = [...withDistance].sort(
         (a, b) => Math.abs(a.distancePercent) - Math.abs(b.distancePercent)
       );
       const closest = sorted[0];
-      return closest.strike / (1 + closest.distancePercent / 100);
+      const inferred = closest.strike / (1 + closest.distancePercent / 100);
+      if (Number.isFinite(inferred) && inferred > 0) {
+        return inferred;
+      }
     }
 
-    // Método 3: opção ATM → strike ≈ preço
+    // Método 2: opção ATM → strike ≈ preço
     const atm = options.find(o => o.moneyness === 'ATM');
     if (atm) return atm.strike;
 
-    // Último recurso: delta mais próximo de 0.5
+    // Método 3: delta mais próximo de 0.5
     const byDelta = [...options].sort(
       (a, b) => Math.abs(a.delta - 0.5) - Math.abs(b.delta - 0.5)
     );

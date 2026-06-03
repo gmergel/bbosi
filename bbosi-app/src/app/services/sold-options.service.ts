@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { OptionIndicators } from '../models/stock.model';
 import { MarketDataService } from './market-data.service';
 import { IndicatorService } from './indicator.service';
-import { forkJoin } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
 
 export interface SoldOption {
   optionTicker: string;
@@ -35,6 +35,7 @@ export class SoldOptionsService {
   private marketData = inject(MarketDataService);
   private indicatorService = inject(IndicatorService);
   private _soldOptions = signal<SoldOption[]>(this.loadFromStorage());
+  private isRefreshing = false;
 
   readonly soldOptions = this._soldOptions.asReadonly();
 
@@ -96,46 +97,67 @@ export class SoldOptionsService {
   /**
    * Atualiza dados live (stockPrice, bbosi, nv) de todas as vendidas agrupando por ação.
    */
-  refreshAll(): void {
+  refreshAll(): Observable<void> {
     const sold = this._soldOptions();
-    if (sold.length === 0) return;
+    if (sold.length === 0 || this.isRefreshing) return of(void 0);
+    this.isRefreshing = true;
 
     // Agrupa por stock para não buscar duplicado
     const stockTickers = [...new Set(sold.map(s => s.stockTicker))];
 
-    stockTickers.forEach(ticker => {
-      this.marketData.fetchAll(ticker).subscribe(({ stock, options }) => {
-        if (stock.price <= 0) return;
+    return forkJoin(
+      stockTickers.map(ticker =>
+        this.marketData.fetchAll(ticker).pipe(
+          map(data => ({ ticker, ...data })),
+          catchError(() => of(null))
+        )
+      )
+    ).pipe(
+      map(results => {
+        const now = new Date().toISOString();
+        let updated = this._soldOptions();
 
-        const indicators = this.indicatorService.calculateFromApi(options, stock.price, ticker);
-        const bbosi = this.indicatorService.calculateBBOSI(indicators);
+        for (const result of results) {
+          if (!result || result.stock.price <= 0) continue;
 
-        const updated = this._soldOptions().map(s => {
-          if (s.stockTicker !== ticker) return s;
+          const indicators = this.indicatorService.calculateFromApi(
+            result.options,
+            result.stock.price,
+            result.ticker
+          );
+          const bbosi = this.indicatorService.calculateBBOSI(indicators);
 
-          // Busca indicadores da opção vendida específica
-          const optInd = indicators.find(i => i.ticker === s.optionTicker);
-          // Busca preço raw (mesmo que não passe nos filtros de indicadores)
-          const rawOpt = options.find(o => o.ticker === s.optionTicker);
+          updated = updated.map(s => {
+            if (s.stockTicker !== result.ticker) return s;
 
-          return {
-            ...s,
-            stockPrice: stock.price,
-            bbosi,
-            nv: optInd ? optInd.nv : s.nv,
-            ve: optInd ? optInd.ve : s.ve,
-            lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
-            tradingDays: optInd ? optInd.tradingDays : (rawOpt ? rawOpt.tradingDays : s.tradingDays),
-            vdxx: optInd ? optInd.vdxx : s.vdxx,
-            optionPrice: optInd ? optInd.price : (rawOpt ? rawOpt.price : (s.optionPrice ?? s.sellPrice)),
-            lastRefresh: new Date().toISOString(),
-          };
-        });
+            // Busca indicadores da opção vendida específica
+            const optInd = indicators.find(i => i.ticker === s.optionTicker);
+            // Busca preço raw (mesmo que não passe nos filtros de indicadores)
+            const rawOpt = result.options.find(o => o.ticker === s.optionTicker);
+
+            return {
+              ...s,
+              stockPrice: result.stock.price,
+              bbosi,
+              nv: optInd ? optInd.nv : s.nv,
+              ve: optInd ? optInd.ve : s.ve,
+              lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
+              tradingDays: optInd ? optInd.tradingDays : (rawOpt ? rawOpt.tradingDays : s.tradingDays),
+              vdxx: optInd ? optInd.vdxx : s.vdxx,
+              optionPrice: optInd ? optInd.price : (rawOpt ? rawOpt.price : (s.optionPrice ?? s.sellPrice)),
+              lastRefresh: now,
+            };
+          });
+        }
 
         this._soldOptions.set(updated);
         this.saveToStorage(updated);
-      });
-    });
+      }),
+      map(() => void 0),
+      finalize(() => {
+        this.isRefreshing = false;
+      })
+    );
   }
 
   /**

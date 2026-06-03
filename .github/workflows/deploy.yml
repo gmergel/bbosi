@@ -30,6 +30,10 @@ jobs:
         working-directory: bbosi-app
         run: npm ci
 
+      - name: Test
+        working-directory: bbosi-app
+        run: npm run test -- --watch=false
+
       - name: Build
         working-directory: bbosi-app
         run: npx ng build --base-href /bbosi/

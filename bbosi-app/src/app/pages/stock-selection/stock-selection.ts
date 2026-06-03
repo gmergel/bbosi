@@ -20,6 +20,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   private marketData = inject(MarketDataService);
   soldOptionsService = inject(SoldOptionsService);
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly ACTIVE_REFRESH_MS = 10000;
 
   Math = Math; // Expose Math for template
 
@@ -28,12 +29,12 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Atualiza dados das opções vendidas
-    this.soldOptionsService.refreshAll();
+    this.refreshSoldData();
 
-    // Auto-refresh a cada 2s
+    // Auto-refresh com menor carga e adaptado à visibilidade da aba
     this.refreshInterval = setInterval(() => {
-      this.soldOptionsService.refreshAll();
-    }, 2000);
+      this.refreshSoldData();
+    }, this.ACTIVE_REFRESH_MS);
 
     const tickers = this.stocks();
     tickers.forEach((stock, i) => {
@@ -56,12 +57,31 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     }
   }
 
+  private refreshSoldData(): void {
+    // Com aba oculta, evita agressividade desnecessária de atualização.
+    const hidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+    if (hidden) {
+      return;
+    }
+    this.soldOptionsService.refreshAll().subscribe();
+  }
+
   selectStock(ticker: string): void {
     this.router.navigate(['/options', ticker]);
   }
 
+  onStockCardKeydown(event: KeyboardEvent, ticker: string): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.selectStock(ticker);
+  }
+
   removeSold(optionTicker: string, event: Event): void {
     event.stopPropagation();
+    const confirmed = window.confirm(
+      `Remover a opcao vendida ${optionTicker} da tela inicial?`
+    );
+    if (!confirmed) return;
     this.soldOptionsService.remove(optionTicker);
   }
 

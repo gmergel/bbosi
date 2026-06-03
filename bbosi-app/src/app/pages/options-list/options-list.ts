@@ -14,6 +14,8 @@ import { IndicatorService, VolRegime } from '../../services/indicator.service';
 import { SoldOptionsService } from '../../services/sold-options.service';
 import { Stock, OptionIndicators } from '../../models/stock.model';
 
+type OptionsDataState = 'loading' | 'ready' | 'empty' | 'mock' | 'error';
+
 @Component({
   selector: 'app-options-list',
   standalone: true,
@@ -42,6 +44,8 @@ export class OptionsListComponent implements OnInit {
   allOptions = signal<OptionIndicators[]>([]);
   bbosi = signal<number>(0);
   loading = signal<boolean>(true);
+  dataState = signal<OptionsDataState>('loading');
+  loadError = signal<string>('');
   isMock = signal<boolean>(false);
   showNoSell = signal<boolean>(false);
   expandedRow = signal<string | null>(null);
@@ -79,39 +83,60 @@ export class OptionsListComponent implements OnInit {
   });
 
   displayedColumns = ['rank', 'ticker', 'strike', 'lastroPercent', 'pregoes', 've', 'vdxx'];
+  private selectedTicker = '';
 
   ngOnInit(): void {
-    const ticker = this.route.snapshot.paramMap.get('ticker') || '';
-    if (!ticker) {
+    this.selectedTicker = this.route.snapshot.paramMap.get('ticker') || '';
+    if (!this.selectedTicker) {
       this.router.navigate(['/']);
       return;
     }
 
-    this.loading.set(true);
+    this.loadData();
+  }
 
-    this.marketData.fetchAll(ticker).subscribe({
+  retryLoad(): void {
+    this.loadData();
+  }
+
+  private loadData(): void {
+    this.loading.set(true);
+    this.dataState.set('loading');
+    this.loadError.set('');
+
+    this.marketData.fetchAll(this.selectedTicker).subscribe({
       next: ({ stock, options, isMock, timestamp }) => {
         this.stock.set(stock);
         this.isMock.set(isMock);
         this.lastUpdated.set(timestamp);
 
+        this.allOptions.set([]);
+        this.bbosi.set(0);
+
         if (options.length > 0) {
-          const indicators = this.indicatorService.calculateFromApi(options, stock.price, ticker);
+          const indicators = this.indicatorService.calculateFromApi(options, stock.price, this.selectedTicker);
           this.allOptions.set(indicators);
           this.bbosi.set(this.indicatorService.calculateBBOSI(indicators));
 
           // Vol regime e IV Rank
-          this.volRegime.set(this.indicatorService.getVolRegime(options, ticker));
-          const ivInfo = this.indicatorService.getIvInfo(ticker, options);
+          this.volRegime.set(this.indicatorService.getVolRegime(options, this.selectedTicker));
+          const ivInfo = this.indicatorService.getIvInfo(this.selectedTicker, options);
           this.ivRank.set(ivInfo.rank);
           this.ivPercentile.set(ivInfo.percentile);
           this.ivCurrent.set(ivInfo.currentIv);
           this.ivDays.set(ivInfo.days);
+
+          this.dataState.set(isMock ? 'mock' : 'ready');
+        } else {
+          this.dataState.set('empty');
         }
+
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
+        this.dataState.set('error');
+        this.loadError.set('Falha ao carregar dados de opcoes. Verifique sua conexao ou tente novamente.');
       },
     });
   }
@@ -122,6 +147,12 @@ export class OptionsListComponent implements OnInit {
 
   toggleRow(ticker: string): void {
     this.expandedRow.set(this.expandedRow() === ticker ? null : ticker);
+  }
+
+  onOptionRowKeydown(event: KeyboardEvent, ticker: string): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.toggleRow(ticker);
   }
 
   getVdxxClass(vdxx: number): string {

@@ -72,7 +72,7 @@ export class LiquidityHistoryService {
   cleanup(): void {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 15);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = this.formatDateLocal(cutoff);
 
     for (const ticker of Object.keys(this.store)) {
       const history = this.store[ticker];
@@ -84,7 +84,13 @@ export class LiquidityHistoryService {
   }
 
   private getToday(): string {
-    return new Date().toISOString().slice(0, 10);
+    return this.formatDateLocal(new Date());
+  }
+
+  private formatDateLocal(date: Date): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    }).format(date);
   }
 
   private loadFromStorage(): LiquidityStore {
