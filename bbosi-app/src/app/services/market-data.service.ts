@@ -24,6 +24,48 @@ export interface OptionsChainResponse {
   }>;
 }
 
+/** Resposta da API vendacoberta: /api/v1/options/stocks */
+export interface VendaCobertaStock {
+  symbol: string;
+  highestOptionsVolumeRank: number;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+  previousClose: number;
+}
+
+/** Resposta da API vendacoberta: POST /api/v1/options */
+export interface VendaCobertaOptionsResponse {
+  options: VendaCobertaOption[];
+  currentPage: number;
+  totalItems: number;
+  totalPages: number;
+  uniqueDueDates: string[];
+}
+
+export interface VendaCobertaOption {
+  ticker: string;
+  externalReferenceDate: string;
+  fm: boolean;
+  type: 'CALL' | 'PUT';
+  mod: string;
+  moneyness: string;
+  strike: number;
+  strikeDistance: number;
+  strikeRate: number;
+  optionPremium: number;
+  impliedVolatility: number;
+  delta: number;
+  gamma: number;
+  theta: number;
+  vega: number;
+  createdAt: string;
+  dueDate: string;
+  stockSymbol: string;
+  version: number;
+}
+
 export interface OptionWithGreeks extends OptionData {
   impliedVol: number;
   delta: number;
@@ -41,6 +83,7 @@ export class MarketDataService {
   private mock = inject(MockDataService);
   private yahooBaseUrls = this.getBaseUrls('yahoo');
   private opcoesBaseUrls = this.getBaseUrls('opcoes');
+  private vendacobertaBaseUrls = this.getBaseUrls('vendacoberta');
   private readonly OPTIONS_CACHE_TTL_MS = 30 * 60 * 1000;
   private readonly PRICE_CACHE_TTL_MS = 15 * 60 * 1000;
 
@@ -59,51 +102,106 @@ export class MarketDataService {
   }
 
   /**
-   * Busca cotação atual da ação via Yahoo Finance.
-   * Fallback: infere das opções (opcoes.net.br) ou usa cache.
+   * Busca lista de ações disponíveis na API vendacoberta com preços.
    */
-  fetchStockPrice(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
-    const yahooTicker = `${ticker}.SA`;
-
-    return this.getWithFallback<any>(
-      this.yahooBaseUrls,
-      `/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`
-    )
-      .pipe(
-        map(res => {
-          const meta = res?.chart?.result?.[0]?.meta;
-          const price = meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
-          const marketTime = meta?.regularMarketTime
-            ? new Date(meta.regularMarketTime * 1000)
-            : null;
-          return { price, marketTime };
-        }),
-        catchError(() => of({ price: 0, marketTime: null as Date | null })),
-        switchMap(data => {
-          if (data.price > 0) {
-            this.cachePrice(ticker, data.price);
-            return of(data);
-          }
-          // Fallback: infere das opções
-          return this.fetchOptions(ticker).pipe(
-            map(options => {
-              const inferred = this.inferPriceFromOptions(options);
-              if (inferred > 0) {
-                this.cachePrice(ticker, inferred);
-                return { price: inferred, marketTime: null as Date | null };
-              }
-              return { price: this.getCachedPrice(ticker), marketTime: null as Date | null };
-            })
-          );
-        })
-      );
+  fetchVendaCobertaStocks(): Observable<VendaCobertaStock[]> {
+    return this.getWithFallback<VendaCobertaStock[]>(
+      this.vendacobertaBaseUrls,
+      '/api/v1/options/stocks'
+    ).pipe(
+      catchError(() => of([] as VendaCobertaStock[]))
+    );
   }
 
   /**
-   * Busca opções (calls) de uma ação via /api/v1 OptionsChain do opcoes.net.br.
-   * Se o API retornar vazio (fora do pregão), usa cache do último resultado.
+   * Busca cotação atual da ação via Yahoo Finance (fonte mais rápida e confiável para preços).
+   * Fallback: vendacoberta → cache.
+   */
+  fetchStockPrice(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
+    return this.fetchStockPriceYahoo(ticker).pipe(
+      switchMap(data => {
+        if (data.price > 0) return of(data);
+        // Fallback: vendacoberta /stocks
+        return this.fetchVendaCobertaStocks().pipe(
+          map(stocks => {
+            const found = stocks.find(s => s.symbol === ticker);
+            if (found && found.close > 0) {
+              this.cachePrice(ticker, found.close);
+              return { price: found.close, marketTime: new Date() };
+            }
+            return { price: this.getCachedPrice(ticker), marketTime: null as Date | null };
+          })
+        );
+      })
+    );
+  }
+
+  private fetchStockPriceYahoo(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
+    const yahooTicker = `${ticker}.SA`;
+    return this.getWithFallback<any>(
+      this.yahooBaseUrls,
+      `/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`
+    ).pipe(
+      map(res => {
+        const meta = res?.chart?.result?.[0]?.meta;
+        const price = meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
+        const marketTime = meta?.regularMarketTime
+          ? new Date(meta.regularMarketTime * 1000)
+          : null;
+        return { price, marketTime };
+      }),
+      catchError(() => of({ price: 0, marketTime: null as Date | null })),
+      switchMap(data => {
+        if (data.price > 0) {
+          this.cachePrice(ticker, data.price);
+          return of(data);
+        }
+        return of({ price: this.getCachedPrice(ticker), marketTime: null as Date | null });
+      })
+    );
+  }
+
+  /**
+   * Busca opções (calls) de uma ação.
+   * Fonte principal: vendacoberta POST /api/v1/options.
+   * Fallback: opcoes.net.br OptionsChain → cache.
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
+    return this.fetchOptionsVendaCoberta(ticker).pipe(
+      switchMap(options => {
+        if (options.length > 0) {
+          this.cacheOptions(ticker, options);
+          return of(options);
+        }
+        // Fallback: opcoes.net.br
+        return this.fetchOptionsOpcoes(ticker);
+      })
+    );
+  }
+
+  private fetchOptionsVendaCoberta(ticker: string): Observable<OptionWithGreeks[]> {
+    const body = {
+      size: '100000',
+      page: '0',
+      stockSelection: ticker,
+      optionType: 'call_put',
+      strikeDistance: 20,
+    };
+
+    return this.postWithFallback<VendaCobertaOptionsResponse>(
+      this.vendacobertaBaseUrls,
+      '/api/v1/options',
+      body
+    ).pipe(
+      map(res => this.parseVendaCobertaOptions(res, ticker)),
+      catchError(err => {
+        console.warn(`VendaCoberta falhou para ${ticker}:`, err);
+        return of([] as OptionWithGreeks[]);
+      })
+    );
+  }
+
+  private fetchOptionsOpcoes(ticker: string): Observable<OptionWithGreeks[]> {
     const z = Math.floor(Date.now() / 10000);
     const path = `/api/v1?z=${z}&r0t=OptionsChain&r0p.underlying_asset_id=${ticker}`;
 
@@ -114,11 +212,10 @@ export class MarketDataService {
           this.cacheOptions(ticker, options);
           return options;
         }
-        // Fora do pregão: usa cache
         return this.getCachedOptions(ticker);
       }),
       catchError(err => {
-        console.error(`Erro ao buscar opções de ${ticker}:`, err);
+        console.error(`Erro ao buscar opções de ${ticker} (opcoes.net.br):`, err);
         return of(this.getCachedOptions(ticker));
       })
     );
@@ -166,7 +263,7 @@ export class MarketDataService {
   }
 
   /**
-   * Busca cotação + opções em paralelo
+   * Busca cotação + opções em paralelo (fonte principal: vendacoberta)
    */
   fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; isMock: boolean; timestamp: Date }> {
     const stock = this.stocks.find(s => s.ticker === ticker) || {
@@ -175,25 +272,8 @@ export class MarketDataService {
       price: 0,
     };
 
-    const yahooTicker = `${ticker}.SA`;
-    const priceSource$ = this.getWithFallback<any>(
-      this.yahooBaseUrls,
-      `/v8/finance/chart/${yahooTicker}?interval=1d&range=1d`
-    )
-      .pipe(
-        map(res => {
-          const meta = res?.chart?.result?.[0]?.meta;
-          const price = meta?.regularMarketPrice ?? meta?.previousClose ?? 0;
-          const marketTime = meta?.regularMarketTime
-            ? new Date(meta.regularMarketTime * 1000)
-            : null;
-          return { price, marketTime };
-        }),
-        catchError(() => of({ price: 0, marketTime: null as Date | null }))
-      );
-
     return forkJoin({
-      priceData: priceSource$,
+      priceData: this.fetchStockPrice(ticker),
       options: this.fetchOptions(ticker),
     }).pipe(
       map(({ priceData, options }) => {
@@ -251,11 +331,41 @@ export class MarketDataService {
     );
   }
 
-  private getBaseUrls(kind: 'yahoo' | 'opcoes'): string[] {
-    const legacy = kind === 'yahoo' ? environment.yahooBaseUrl : environment.opcoesBaseUrl;
-    const list = kind === 'yahoo'
-      ? (environment as any).yahooBaseUrls
-      : (environment as any).opcoesBaseUrls;
+  private postWithFallback<T>(baseUrls: string[], path: string, body: any, attempt = 0): Observable<T> {
+    const base = baseUrls[attempt];
+    if (!base) {
+      return throwError(() => new Error('Nenhum endpoint de proxy configurado'));
+    }
+
+    return this.http.post<T>(`${base}${path}`, body).pipe(
+      timeout(15000),
+      catchError(err => {
+        if (attempt < baseUrls.length - 1) {
+          return this.postWithFallback<T>(baseUrls, path, body, attempt + 1);
+        }
+        return throwError(() => err);
+      })
+    );
+  }
+
+  private getBaseUrls(kind: 'yahoo' | 'opcoes' | 'vendacoberta'): string[] {
+    let legacy: string;
+    let list: string[] | undefined;
+
+    switch (kind) {
+      case 'yahoo':
+        legacy = environment.yahooBaseUrl;
+        list = (environment as any).yahooBaseUrls;
+        break;
+      case 'opcoes':
+        legacy = environment.opcoesBaseUrl;
+        list = (environment as any).opcoesBaseUrls;
+        break;
+      case 'vendacoberta':
+        legacy = (environment as any).vendacobertaBaseUrl;
+        list = (environment as any).vendacobertaBaseUrls;
+        break;
+    }
 
     const normalized = Array.isArray(list) ? list : [];
     if (legacy && !normalized.includes(legacy)) {
@@ -296,7 +406,62 @@ export class MarketDataService {
   }
 
   /**
-   * Parseia a resposta do /api/v1 OptionsChain.
+   * Parseia a resposta da API vendacoberta POST /api/v1/options.
+   * Filtra apenas CALLs com vencimento até 80 dias úteis.
+   */
+  private parseVendaCobertaOptions(response: VendaCobertaOptionsResponse, stockTicker: string): OptionWithGreeks[] {
+    if (!response?.options?.length) return [];
+
+    const options: OptionWithGreeks[] = [];
+
+    for (const opt of response.options) {
+      // Apenas CALLs para venda coberta
+      if (opt.type !== 'CALL') continue;
+
+      // Descarta opções semanais (W1, W2, W3, W4) — IV distorcida e baixa liquidez
+      if (/W\d$/.test(opt.ticker)) continue;
+
+      const expiration = new Date(opt.dueDate);
+      const tradingDays = this.calcTradingDays(expiration);
+
+      // Filtra vencimentos até 80 dias úteis
+      if (tradingDays <= 0 || tradingDays > 80) continue;
+
+      // Descarta opções sem prêmio
+      if (opt.optionPremium <= 0) continue;
+
+      // Converte IV de percentual (35.05 = 35.05%) para decimal (0.3505)
+      const impliedVol = opt.impliedVolatility / 100;
+
+      // strikeDistance já vem em percentual da API (ex: -0.64 = -0.64%)
+      const distancePercent = opt.strikeDistance;
+      const premiumPercent = opt.strike > 0 ? (opt.optionPremium / opt.strike) * 100 : 0;
+
+      options.push({
+        ticker: opt.ticker,
+        strike: opt.strike,
+        expiration,
+        tradingDays,
+        price: opt.optionPremium,
+        trades: 100, // vendacoberta pré-filtra opções líquidas; sem dado de negócios
+        volume: 0,
+        tradePercent: 0,
+        impliedVol,
+        delta: opt.delta,
+        gamma: opt.gamma,
+        theta: opt.theta,
+        vega: opt.vega,
+        moneyness: opt.moneyness,
+        distancePercent,
+        premiumPercent,
+      });
+    }
+
+    return options;
+  }
+
+  /**
+   * Parseia a resposta do /api/v1 OptionsChain (opcoes.net.br).
    * Formato: cada expiration tem .calls[] onde cada call é um array:
    * [0] suffix, [1] fm, [2] mod, [3] strike, [4] aio (I/A/O),
    * [5] dist%, [6] último, [7] var%, [8] data/hora, [9] negócios,

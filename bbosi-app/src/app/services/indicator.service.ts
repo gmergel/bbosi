@@ -228,17 +228,42 @@ export class IndicatorService {
   }
 
   /**
-   * Extrai a IV ATM (ou mais próxima do dinheiro) das opções.
+   * Extrai a IV ATM representativa das opções.
+   * Usa a mediana das IVs de opções ATM com vencimento 15-45 dias úteis,
+   * evitando semanais com IV distorcida e outliers.
    */
   private getAtmIv(options: OptionWithGreeks[]): number {
-    const atm = options.find(o => o.moneyness === 'ATM');
-    if (atm && atm.impliedVol > 0) return atm.impliedVol;
+    const withIv = options.filter(o => o.impliedVol > 0 && o.impliedVol < 3);
+    if (withIv.length === 0) return 0;
 
-    // Fallback: opção com menor distância percentual
-    const sorted = [...options]
-      .filter(o => o.impliedVol > 0)
+    // Prioridade 1: mediana das ATM com vencimento 15-45du
+    const idealAtm = withIv
+      .filter(o => o.moneyness === 'ATM' && o.tradingDays >= 15 && o.tradingDays <= 45);
+    if (idealAtm.length >= 3) return this.median(idealAtm.map(o => o.impliedVol));
+
+    // Prioridade 2: mediana de qualquer opção 15-45du com distância <= 3%
+    const idealRange = withIv
+      .filter(o => o.tradingDays >= 15 && o.tradingDays <= 45 && Math.abs(o.distancePercent) <= 3);
+    if (idealRange.length >= 3) return this.median(idealRange.map(o => o.impliedVol));
+
+    // Prioridade 3: ATM com vencimento >= 10du, mediana
+    const anyAtm = withIv.filter(o => o.moneyness === 'ATM' && o.tradingDays >= 10);
+    if (anyAtm.length >= 2) return this.median(anyAtm.map(o => o.impliedVol));
+
+    // Fallback: menor distância percentual com vencimento razoável
+    const sorted = withIv
+      .filter(o => o.tradingDays >= 10)
       .sort((a, b) => Math.abs(a.distancePercent) - Math.abs(b.distancePercent));
-    return sorted[0]?.impliedVol ?? 0;
+    return sorted[0]?.impliedVol ?? withIv[0]?.impliedVol ?? 0;
+  }
+
+  private median(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1] + sorted[mid]) / 2
+      : sorted[mid];
   }
 
   /**

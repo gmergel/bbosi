@@ -1,4 +1,17 @@
 {
+  "/api/vendacoberta": {
+    "target": "https://api.vendacoberta.com.br",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/vendacoberta": ""
+    },
+    "headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "Origin": "https://vendacoberta.com.br",
+      "Referer": "https://vendacoberta.com.br/"
+    }
+  },
   "/api/opcoes": {
     "target": "https://opcoes.net.br",
     "secure": true,

@@ -28,21 +28,30 @@ export class IvHistoryService {
    */
   recordDay(stockTicker: string, atmIv: number): void {
     if (atmIv <= 0) return;
+    // Sanidade: IV deve ser decimal (0.01 a 5.0). Se > 5, assume percentual e descarta.
+    if (atmIv > 5) return;
 
     const today = this.getToday();
     if (!this.store[stockTicker]) this.store[stockTicker] = [];
 
     const history = this.store[stockTicker];
-    const existing = history.findIndex(s => s.date === today);
 
-    if (existing >= 0) {
-      history[existing].iv = atmIv;
-    } else {
-      history.push({ date: today, iv: atmIv });
+    // Limpa entradas anteriores com valores absurdos (ex: IV em formato percentual bruto)
+    const cleaned = history.filter(s => s.iv <= 5);
+    if (cleaned.length !== history.length) {
+      this.store[stockTicker] = cleaned;
     }
 
-    if (history.length > MAX_DAYS) {
-      history.splice(0, history.length - MAX_DAYS);
+    const existing = cleaned.findIndex(s => s.date === today);
+
+    if (existing >= 0) {
+      cleaned[existing].iv = atmIv;
+    } else {
+      cleaned.push({ date: today, iv: atmIv });
+    }
+
+    if (cleaned.length > MAX_DAYS) {
+      cleaned.splice(0, cleaned.length - MAX_DAYS);
     }
 
     this.saveToStorage();
