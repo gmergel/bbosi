@@ -1,0 +1,6 @@
+name = "bbosi-proxy"
+main = "worker.mjs"
+compatibility_date = "2026-09-04"
+
+# Copie este arquivo para wrangler.toml antes de publicar.
+# O arquivo real pode conter account_id/routes e nao precisa ser commitado.
