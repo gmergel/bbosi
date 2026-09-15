@@ -103,11 +103,38 @@
                 </div>
                 <div class="profit-bar__marker" style="left: 50%" matTooltip="Alvo 50%"></div>
               </div>
-              <div class="profit-meta">
-                <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
-                <span>Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
-                <span>Alvo R${{ getTarget(sold).toFixed(2) }}</span>
-              </div>
+              @if (editingSellTicker() === sold.optionTicker) {
+                <div class="sell-price-editor" (click)="$event.stopPropagation()">
+                  <label class="sell-price-editor__input-wrap">
+                    <span>Venda R$</span>
+                    <input
+                      inputmode="decimal"
+                      type="text"
+                      autocomplete="off"
+                      [value]="sellPriceInput()"
+                      (input)="sellPriceInput.set($any($event.target).value)"
+                      (keydown.enter)="confirmEditSellPrice(sold, $event)"
+                      aria-label="Preco executado da venda"
+                    />
+                  </label>
+                  <button mat-icon-button type="button" (click)="cancelEditSellPrice()" aria-label="Cancelar edicao" matTooltip="Cancelar">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" class="sell-price-editor__confirm" (click)="confirmEditSellPrice(sold, $event)" aria-label="Confirmar preco" matTooltip="Salvar preco">
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <span class="sell-price-editor__hint">Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
+                </div>
+              } @else {
+                <div class="profit-meta">
+                  <button class="profit-meta__sale" type="button" (click)="editSellPrice(sold, $event)" aria-label="Editar preco de venda">
+                    <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
+                    <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
+                  </button>
+                  <span>Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
+                  <span>Alvo R${{ getTarget(sold).toFixed(2) }}</span>
+                </div>
+              }
             </div>
           </div>
         }

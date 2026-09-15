@@ -389,11 +389,82 @@
 
 .profit-meta {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   margin-top: 4px;
   font-size: 0.6rem;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.7;
+}
+
+.profit-meta__sale {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 28px;
+  margin: -4px 0;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  mat-icon {
+    width: 14px;
+    height: 14px;
+    font-size: 14px;
+    opacity: 0.55;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba(79, 209, 197, 0.35);
+    background: rgba(79, 209, 197, 0.08);
+    color: #4fd1c5;
+    outline: none;
+
+    mat-icon { opacity: 1; }
+  }
+}
+
+.sell-price-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.sell-price-editor__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 120px;
+  padding: 0 8px;
+  border: 1px solid rgba(79, 209, 197, 0.45);
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.65rem;
+}
+
+.sell-price-editor__input-wrap input {
+  width: 62px;
+  padding: 7px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sell-price-editor__confirm { color: #4fd1c5; }
+
+.sell-price-editor__hint {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 // Barra visual Preço → GerBOSI
