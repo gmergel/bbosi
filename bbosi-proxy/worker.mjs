@@ -21,18 +21,23 @@ const TARGETS = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-BBOSI-Token',
   'Access-Control-Max-Age': '86400',
 };
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
     const requestUrl = new URL(request.url);
+
+    if (requestUrl.pathname === '/api/positions' || requestUrl.pathname.startsWith('/api/positions/')) {
+      return handlePositions(request, env, requestUrl);
+    }
+
     const match = Object.entries(TARGETS).find(([prefix]) => requestUrl.pathname.startsWith(prefix));
 
     if (!match) {
@@ -69,6 +74,85 @@ export default {
     });
   },
 };
+
+async function handlePositions(request, env, requestUrl) {
+  if (!envTokenMatches(request, env, requestUrl)) {
+    return json({ error: 'Nao autorizado' }, 401);
+  }
+
+  if (request.method === 'GET') {
+    const { results } = await env.DB.prepare(
+      'SELECT * FROM sold_options ORDER BY sell_date DESC'
+    ).all();
+    return json(results.map(fromRow), 200);
+  }
+
+  if (request.method === 'PUT') {
+    const options = await request.json();
+    if (!Array.isArray(options)) return json({ error: 'Formato invalido' }, 400);
+
+    const statements = [env.DB.prepare('DELETE FROM sold_options')];
+    for (const option of options) {
+      statements.push(env.DB.prepare(`
+        INSERT INTO sold_options (
+          id, option_ticker, stock_ticker, strike, sell_price, sell_date,
+          expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi,
+          stock_price, option_price, last_refresh, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        option.id,
+        option.optionTicker,
+        option.stockTicker,
+        option.strike,
+        option.sellPrice,
+        option.sellDate,
+        option.expiration,
+        option.tradingDays,
+        option.nv,
+        option.ve,
+        option.vdxx,
+        option.lastroPercent,
+        option.bbosi,
+        option.stockPrice,
+        option.optionPrice,
+        option.lastRefresh ?? null,
+        new Date().toISOString(),
+      ));
+    }
+
+    await request.env.DB.batch(statements);
+    return json({ ok: true }, 200);
+  }
+
+  return json({ error: 'Metodo nao permitido' }, 405);
+}
+
+function envTokenMatches(request, env, requestUrl) {
+  const configuredToken = env.POSITIONS_TOKEN;
+  const receivedToken = request.headers.get('X-BBOSI-Token');
+  return Boolean(configuredToken && receivedToken && configuredToken === receivedToken);
+}
+
+function fromRow(row) {
+  return {
+    id: row.id,
+    optionTicker: row.option_ticker,
+    stockTicker: row.stock_ticker,
+    strike: row.strike,
+    sellPrice: row.sell_price,
+    sellDate: row.sell_date,
+    expiration: row.expiration,
+    tradingDays: row.trading_days,
+    nv: row.nv,
+    ve: row.ve,
+    vdxx: row.vdxx,
+    lastroPercent: row.lastro_percent,
+    bbosi: row.bbosi,
+    stockPrice: row.stock_price,
+    optionPrice: row.option_price,
+    lastRefresh: row.last_refresh,
+  };
+}
 
 function hasBody(method) {
   return !['GET', 'HEAD'].includes(method.toUpperCase());

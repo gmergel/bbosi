@@ -125,6 +125,13 @@
       @if (lastUpdated()) {
         <span class="timestamp"><mat-icon class="timestamp__icon">schedule</mat-icon>{{ lastUpdated() | relativeTime }}</span>
       }
+      <button mat-icon-button
+              type="button"
+              aria-label="Configurar sincronizacao"
+              matTooltip="Configurar sincronizacao"
+              (click)="configureSyncToken()">
+        <mat-icon>vpn_key</mat-icon>
+      </button>
     </div>
     <div class="stocks-grid">
       @for (stock of stocks(); track stock.ticker) {

@@ -5,6 +5,7 @@ export const environment = {
   yahooBaseUrl: `${proxyBaseUrl}/api/yahoo`,
   opcoesBaseUrl: `${proxyBaseUrl}/api/opcoes`,
   vendacobertaBaseUrl: `${proxyBaseUrl}/api/vendacoberta`,
+  positionsBaseUrl: `${proxyBaseUrl}/api/positions`,
   yahooBaseUrls: [`${proxyBaseUrl}/api/yahoo`],
   opcoesBaseUrls: [`${proxyBaseUrl}/api/opcoes`],
   vendacobertaBaseUrls: [`${proxyBaseUrl}/api/vendacoberta`],

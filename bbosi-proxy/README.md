@@ -7,6 +7,7 @@ O GitHub Pages entrega apenas arquivos estaticos, entao ele nao consegue executa
 - `/api/yahoo` -> `https://query1.finance.yahoo.com`
 - `/api/opcoes` -> `https://opcoes.net.br`
 - `/api/vendacoberta` -> `https://api.vendacoberta.com.br`
+- `/api/positions` -> banco D1 privado com as opcoes vendidas
 
 ## Deploy com Cloudflare Worker
 
@@ -43,6 +44,24 @@ Se o deploy mostrar o aviso `You need to register a workers.dev subdomain`, abra
 ```text
 https://bbosi-proxy.seu-usuario.workers.dev
 ```
+
+## Banco de posicoes
+
+Crie o banco D1 e copie o ID retornado para `wrangler.toml`:
+
+```bash
+npx wrangler d1 create bbosi
+npx wrangler d1 migrations apply bbosi --remote
+npx wrangler secret put POSITIONS_TOKEN
+```
+
+O comando `secret put` pede um token privado. Use o mesmo token no computador e
+no celular pelo botao de chave na tela inicial. O token fica somente no
+`localStorage` de cada dispositivo e nao deve ser colocado no codigo Angular.
+
+Para desenvolvimento local, execute o Worker em `localhost:8787` e o Angular
+em outro terminal. A rota `/api/positions` do proxy local encaminha para esse
+Worker.
 
 7. Atualize `bbosi-app/src/environments/environment.prod.ts` para usar essa base:
 

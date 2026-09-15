@@ -85,6 +85,13 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     this.soldOptionsService.remove(optionTicker);
   }
 
+  configureSyncToken(): void {
+    const token = window.prompt('Informe o token de sincronizacao');
+    if (token?.trim()) {
+      this.soldOptionsService.setSyncToken(token);
+    }
+  }
+
   getNvColor(nv: number): string {
     return this.soldOptionsService.getNvColor(nv);
   }

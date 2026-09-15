@@ -3,8 +3,11 @@ import { OptionIndicators } from '../models/stock.model';
 import { MarketDataService } from './market-data.service';
 import { IndicatorService } from './indicator.service';
 import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 export interface SoldOption {
+  id: string;
   optionTicker: string;
   stockTicker: string;
   strike: number;
@@ -29,18 +32,25 @@ export interface RollSignal {
 }
 
 const STORAGE_KEY = 'bbosi-sold-options';
+const SYNC_TOKEN_KEY = 'bbosi-sync-token';
 
 @Injectable({ providedIn: 'root' })
 export class SoldOptionsService {
   private marketData = inject(MarketDataService);
   private indicatorService = inject(IndicatorService);
+  private http = inject(HttpClient);
   private _soldOptions = signal<SoldOption[]>(this.loadFromStorage());
   private isRefreshing = false;
 
   readonly soldOptions = this._soldOptions.asReadonly();
 
+  constructor() {
+    void this.loadFromRemote();
+  }
+
   sell(option: OptionIndicators, stockTicker: string, bbosi: number, stockPrice: number): void {
     const sold: SoldOption = {
+      id: globalThis.crypto.randomUUID(),
       optionTicker: option.ticker,
       stockTicker,
       strike: option.strike,
@@ -61,12 +71,14 @@ export class SoldOptionsService {
     const current = [...this._soldOptions(), sold];
     this._soldOptions.set(current);
     this.saveToStorage(current);
+    this.syncToRemote(current);
   }
 
   remove(optionTicker: string): void {
     const current = this._soldOptions().filter(o => o.optionTicker !== optionTicker);
     this._soldOptions.set(current);
     this.saveToStorage(current);
+    this.syncToRemote(current);
   }
 
   updateNv(optionTicker: string, nv: number): void {
@@ -75,6 +87,7 @@ export class SoldOptionsService {
     );
     this._soldOptions.set(current);
     this.saveToStorage(current);
+    this.syncToRemote(current);
   }
 
   isSold(optionTicker: string): boolean {
@@ -152,6 +165,7 @@ export class SoldOptionsService {
 
         this._soldOptions.set(updated);
         this.saveToStorage(updated);
+        this.syncToRemote(updated);
       }),
       map(() => void 0),
       finalize(() => {
@@ -216,7 +230,12 @@ export class SoldOptionsService {
   private loadFromStorage(): SoldOption[] {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      const options = data ? JSON.parse(data) : [];
+      return options.map((option: SoldOption) => ({
+        ...option,
+        id: option.id || globalThis.crypto.randomUUID(),
+        expiration: new Date(option.expiration),
+      }));
     } catch {
       return [];
     }
@@ -224,5 +243,48 @@ export class SoldOptionsService {
 
   private saveToStorage(options: SoldOption[]): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(options));
+  }
+
+  setSyncToken(token: string): void {
+    localStorage.setItem(SYNC_TOKEN_KEY, token.trim());
+    void this.loadFromRemote();
+  }
+
+  clearSyncToken(): void {
+    localStorage.removeItem(SYNC_TOKEN_KEY);
+  }
+
+  private loadFromRemote(): Promise<void> {
+    const token = localStorage.getItem(SYNC_TOKEN_KEY);
+    if (!token) return Promise.resolve();
+
+    return new Promise(resolve => {
+      this.http.get<SoldOption[]>(environment.positionsBaseUrl, {
+        headers: { 'X-BBOSI-Token': token },
+      }).pipe(
+        catchError(() => of(null)),
+      ).subscribe(options => {
+        if (options) {
+          const normalized = options.map(option => ({
+            ...option,
+            expiration: new Date(option.expiration),
+          }));
+          this._soldOptions.set(normalized);
+          this.saveToStorage(normalized);
+        }
+        resolve();
+      });
+    });
+  }
+
+  private syncToRemote(options: SoldOption[]): void {
+    const token = localStorage.getItem(SYNC_TOKEN_KEY);
+    if (!token) return;
+
+    this.http.put(environment.positionsBaseUrl, options, {
+      headers: { 'X-BBOSI-Token': token },
+    }).pipe(
+      catchError(() => of(null)),
+    ).subscribe();
   }
 }
