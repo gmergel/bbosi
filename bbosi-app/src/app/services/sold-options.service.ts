@@ -90,6 +90,17 @@ export class SoldOptionsService {
     this.syncToRemote(current);
   }
 
+  updateSellPrice(optionTicker: string, sellPrice: number): void {
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) return;
+
+    const current = this._soldOptions().map(option =>
+      option.optionTicker === optionTicker ? { ...option, sellPrice } : option
+    );
+    this._soldOptions.set(current);
+    this.saveToStorage(current);
+    this.syncToRemote(current);
+  }
+
   isSold(optionTicker: string): boolean {
     return this._soldOptions().some(o => o.optionTicker === optionTicker);
   }

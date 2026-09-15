@@ -21,6 +21,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   soldOptionsService = inject(SoldOptionsService);
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private readonly ACTIVE_REFRESH_MS = 10000;
+  editingSellTicker = signal<string | null>(null);
+  sellPriceInput = signal<string>('');
 
   Math = Math; // Expose Math for template
 
@@ -90,6 +92,26 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (token?.trim()) {
       this.soldOptionsService.setSyncToken(token);
     }
+  }
+
+  editSellPrice(sold: SoldOption, event: Event): void {
+    event.stopPropagation();
+    this.editingSellTicker.set(sold.optionTicker);
+    this.sellPriceInput.set(sold.sellPrice.toFixed(2));
+  }
+
+  cancelEditSellPrice(): void {
+    this.editingSellTicker.set(null);
+    this.sellPriceInput.set('');
+  }
+
+  confirmEditSellPrice(sold: SoldOption, event: Event): void {
+    event.stopPropagation();
+    const sellPrice = Number(this.sellPriceInput().replace(',', '.'));
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) return;
+
+    this.soldOptionsService.updateSellPrice(sold.optionTicker, sellPrice);
+    this.cancelEditSellPrice();
   }
 
   getNvColor(nv: number): string {
