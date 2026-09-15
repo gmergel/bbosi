@@ -262,10 +262,41 @@
               </div>
               <div class="detail-actions">
                 @if (!isSold(option.ticker)) {
-                  <button mat-flat-button color="primary" (click)="sellOption(option, $event)">
-                    <mat-icon>sell</mat-icon>
-                    VENDA
-                  </button>
+                  @if (sellingTicker() !== option.ticker) {
+                    <button mat-flat-button color="primary" (click)="sellOption(option, $event)">
+                      <mat-icon>sell</mat-icon>
+                      VENDA
+                    </button>
+                  } @else {
+                    <div class="sell-confirm" (click)="$event.stopPropagation()">
+                      <div class="sell-confirm__heading">
+                        <span>Preco executado</span>
+                        <span class="sell-confirm__market">Mercado: R$ {{ option.price.toFixed(2) }}</span>
+                      </div>
+                      <div class="sell-confirm__controls">
+                        <label class="sell-confirm__input-wrap">
+                          <span>R$</span>
+                          <input
+                            #sellPrice
+                            inputmode="decimal"
+                            type="text"
+                            autocomplete="off"
+                            [value]="sellPriceInput()"
+                            (input)="sellPriceInput.set($any($event.target).value)"
+                            (keydown.enter)="confirmSell(option, $event)"
+                            aria-label="Preco executado da venda"
+                          />
+                        </label>
+                        <button mat-icon-button type="button" (click)="cancelSell()" aria-label="Cancelar venda" matTooltip="Cancelar">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                        <button mat-flat-button color="primary" type="button" (click)="confirmSell(option, $event)">
+                          <mat-icon>check</mat-icon>
+                          CONFIRMAR
+                        </button>
+                      </div>
+                    </div>
+                  }
                 } @else {
                   <button mat-stroked-button color="warn" (click)="unsellOption(option.ticker, $event)">
                     <mat-icon>undo</mat-icon>

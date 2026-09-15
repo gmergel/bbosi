@@ -4,6 +4,60 @@
   padding: 24px 16px 48px;
 }
 
+.sell-confirm {
+  width: min(100%, 430px);
+  padding: 12px;
+  border: 1px solid rgba(79, 209, 197, 0.35);
+  background: rgba(79, 209, 197, 0.07);
+}
+
+.sell-confirm__heading,
+.sell-confirm__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sell-confirm__heading {
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sell-confirm__market {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.68rem;
+  font-weight: 400;
+}
+
+.sell-confirm__controls {
+  justify-content: flex-end;
+}
+
+.sell-confirm__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 108px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.sell-confirm__input-wrap input {
+  width: 72px;
+  padding: 9px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .timestamp {
   text-align: right;
   font-size: 0.65rem;
@@ -576,6 +630,9 @@
   .option-row__vdxx { width: 80px; }
   .best-pick__details { gap: 8px; font-size: 0.8rem; }
   .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .sell-confirm__heading { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .sell-confirm__controls { justify-content: stretch; }
+  .sell-confirm__controls > button:last-child { flex: 1; }
 }
 
 // ===== DATA SOURCES FOOTER =====

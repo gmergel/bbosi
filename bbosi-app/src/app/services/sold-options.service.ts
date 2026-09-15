@@ -48,13 +48,13 @@ export class SoldOptionsService {
     void this.loadFromRemote();
   }
 
-  sell(option: OptionIndicators, stockTicker: string, bbosi: number, stockPrice: number): void {
+  sell(option: OptionIndicators, stockTicker: string, bbosi: number, stockPrice: number, sellPrice = option.price): void {
     const sold: SoldOption = {
       id: globalThis.crypto.randomUUID(),
       optionTicker: option.ticker,
       stockTicker,
       strike: option.strike,
-      sellPrice: option.price,
+      sellPrice,
       sellDate: new Date().toISOString(),
       expiration: option.expiration,
       tradingDays: option.tradingDays,

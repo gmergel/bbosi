@@ -49,6 +49,8 @@ export class OptionsListComponent implements OnInit {
   isMock = signal<boolean>(false);
   showNoSell = signal<boolean>(false);
   expandedRow = signal<string | null>(null);
+  sellingTicker = signal<string | null>(null);
+  sellPriceInput = signal<string>('');
   lastUpdated = signal<Date | null>(null);
   volRegime = signal<VolRegime>('normal');
   ivRank = signal<number>(-1);
@@ -173,8 +175,23 @@ export class OptionsListComponent implements OnInit {
 
   sellOption(option: OptionIndicators, event: Event): void {
     event.stopPropagation();
+    this.sellingTicker.set(option.ticker);
+    this.sellPriceInput.set(option.price.toFixed(2));
+  }
+
+  cancelSell(): void {
+    this.sellingTicker.set(null);
+    this.sellPriceInput.set('');
+  }
+
+  confirmSell(option: OptionIndicators, event: Event): void {
+    event.stopPropagation();
+    const sellPrice = Number(this.sellPriceInput().replace(',', '.'));
+    if (!Number.isFinite(sellPrice) || sellPrice <= 0) return;
+
     const ticker = this.route.snapshot.paramMap.get('ticker') || '';
-    this.soldOptionsService.sell(option, ticker, this.bbosi(), this.stock()?.price || 0);
+    this.soldOptionsService.sell(option, ticker, this.bbosi(), this.stock()?.price || 0, sellPrice);
+    this.cancelSell();
   }
 
   unsellOption(optionTicker: string, event: Event): void {
