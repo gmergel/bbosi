@@ -10,11 +10,12 @@ export class RelativeTimePipe implements PipeTransform {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMin = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
 
     if (diffMin < 1) return 'agora';
     if (diffMin < 60) return `há ${diffMin}min`;
-    if (diffHours < 24) {
+
+    const isSameDay = date.toDateString() === now.toDateString();
+    if (isSameDay) {
       const h = date.getHours().toString().padStart(2, '0');
       const m = date.getMinutes().toString().padStart(2, '0');
       return `hoje ${h}:${m}`;
