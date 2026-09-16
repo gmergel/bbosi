@@ -42,6 +42,7 @@ export class SoldOptionsService {
   private _soldOptions = signal<SoldOption[]>(this.loadFromStorage());
   private _hasSyncToken = signal<boolean>(this.hasStoredSyncToken());
   private isRefreshing = false;
+  private isSyncingToRemote = false;
 
   readonly soldOptions = this._soldOptions.asReadonly();
   readonly hasSyncToken = this._hasSyncToken.asReadonly();
@@ -187,6 +188,26 @@ export class SoldOptionsService {
     );
   }
 
+  refreshRemote(): Observable<void> {
+    const token = localStorage.getItem(SYNC_TOKEN_KEY);
+    if (!token || this.isSyncingToRemote) return of(void 0);
+
+    return this.http.get<SoldOption[]>(environment.positionsBaseUrl, {
+      headers: { 'X-BBOSI-Token': token },
+    }).pipe(
+      map(options => {
+        const normalized = options.map(option => ({
+          ...option,
+          expiration: new Date(option.expiration),
+        }));
+        this._soldOptions.set(normalized);
+        this.saveToStorage(normalized);
+      }),
+      map(() => void 0),
+      catchError(() => of(void 0)),
+    );
+  }
+
   /**
    * Calcula % do prêmio já capturado (lucro realizado até agora).
    * 100% = opção zerou; 50% = metade do prêmio vendido já virou lucro.
@@ -276,36 +297,19 @@ export class SoldOptionsService {
   }
 
   private loadFromRemote(): Promise<void> {
-    const token = localStorage.getItem(SYNC_TOKEN_KEY);
-    if (!token) return Promise.resolve();
-
-    return new Promise(resolve => {
-      this.http.get<SoldOption[]>(environment.positionsBaseUrl, {
-        headers: { 'X-BBOSI-Token': token },
-      }).pipe(
-        catchError(() => of(null)),
-      ).subscribe(options => {
-        if (options) {
-          const normalized = options.map(option => ({
-            ...option,
-            expiration: new Date(option.expiration),
-          }));
-          this._soldOptions.set(normalized);
-          this.saveToStorage(normalized);
-        }
-        resolve();
-      });
-    });
+    return new Promise(resolve => this.refreshRemote().subscribe(() => resolve()));
   }
 
   private syncToRemote(options: SoldOption[]): void {
     const token = localStorage.getItem(SYNC_TOKEN_KEY);
     if (!token) return;
+    this.isSyncingToRemote = true;
 
     this.http.put(environment.positionsBaseUrl, options, {
       headers: { 'X-BBOSI-Token': token },
     }).pipe(
       catchError(() => of(null)),
+      finalize(() => { this.isSyncingToRemote = false; }),
     ).subscribe();
   }
 }

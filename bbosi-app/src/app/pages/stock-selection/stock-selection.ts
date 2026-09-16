@@ -8,6 +8,7 @@ import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-stock-selection',
@@ -68,7 +69,9 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (hidden) {
       return;
     }
-    this.soldOptionsService.refreshAll().subscribe();
+    this.soldOptionsService.refreshRemote().pipe(
+      switchMap(() => this.soldOptionsService.refreshAll()),
+    ).subscribe();
   }
 
   selectStock(ticker: string): void {
