@@ -1,13 +1,13 @@
 <div class="home">
   <!-- Opcoes vendidas -->
-  @if (soldOptionsService.soldOptions().length > 0) {
+  @if (soldOptionsService.activeOptions().length > 0) {
     <section class="section sold-section">
       <h2 class="section__title">
         <mat-icon>assignment_turned_in</mat-icon>
         Minhas Vendas
       </h2>
       <div class="sold-grid">
-        @for (sold of soldOptionsService.soldOptions(); track sold.optionTicker) {
+        @for (sold of soldOptionsService.activeOptions(); track sold.optionTicker) {
           <div class="sold-card glass"
                [class.sold-card--safe]="getCardStatus(sold) === 'safe'"
                [class.sold-card--alvo]="getCardStatus(sold) === 'alvo'"
@@ -133,10 +133,72 @@
                   </button>
                   <span>Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
                   <span>Alvo R${{ getTarget(sold).toFixed(2) }}</span>
+                  @if (buybackTicker() !== sold.optionTicker) {
+                    <button class="buyback-button" type="button" (click)="editBuybackPrice(sold, $event)" aria-label="Registrar recompra">
+                      <mat-icon>shopping_cart_checkout</mat-icon>
+                      <span>Recomprar</span>
+                    </button>
+                  }
+                </div>
+              }
+              @if (buybackTicker() === sold.optionTicker) {
+                <div class="buyback-editor" (click)="$event.stopPropagation()">
+                  <span class="buyback-editor__label">Recompra</span>
+                  <label class="sell-price-editor__input-wrap">
+                    <span>R$</span>
+                    <input
+                      inputmode="decimal"
+                      type="text"
+                      autocomplete="off"
+                      [value]="buybackPriceInput()"
+                      (input)="buybackPriceInput.set($any($event.target).value)"
+                      (keydown.enter)="confirmBuyback(sold, $event)"
+                      aria-label="Preco de recompra"
+                    />
+                  </label>
+                  <button mat-icon-button type="button" (click)="cancelBuyback()" aria-label="Cancelar recompra" matTooltip="Cancelar">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" class="sell-price-editor__confirm" (click)="confirmBuyback(sold, $event)" aria-label="Confirmar recompra" matTooltip="Confirmar recompra">
+                    <mat-icon>check</mat-icon>
+                  </button>
                 </div>
               }
             </div>
           </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (soldOptionsService.soldOptions().length > soldOptionsService.activeOptions().length) {
+    <section class="section history-section">
+      <h2 class="section__title">
+        <mat-icon>history</mat-icon>
+        Historico de operacoes
+      </h2>
+      <div class="history-list">
+        @for (closed of soldOptionsService.soldOptions(); track closed.optionTicker) {
+          @if (closed.buybackDate) {
+            <div class="history-row">
+              <div>
+                <strong>{{ closed.optionTicker }}</strong>
+                <span>{{ closed.stockTicker }} · recompra {{ closed.buybackDate | relativeTime }}</span>
+              </div>
+              <div class="history-result" [class.history-result--loss]="getRealizedProfit(closed) < 0">
+                <strong>{{ getRealizedProfit(closed) >= 0 ? '+' : '' }}R$ {{ getRealizedProfit(closed).toFixed(2) }}</strong>
+                <span>Venda R${{ closed.sellPrice.toFixed(2) }} · Recompra R${{ (closed.buybackPrice ?? 0).toFixed(2) }}</span>
+              </div>
+              <button mat-icon-button
+                      type="button"
+                      class="history-delete"
+                      (click)="removeFromHistory(closed, $event)"
+                      [attr.aria-label]="'Remover ' + closed.optionTicker + ' do historico'"
+                      matTooltip="Remover do historico">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          }
         }
       </div>
     </section>

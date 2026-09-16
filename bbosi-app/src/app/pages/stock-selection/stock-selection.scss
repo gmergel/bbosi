@@ -499,6 +499,89 @@
   }
 }
 
+.buyback-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: -4px 0;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  font: inherit;
+  font-size: 0.6rem;
+  cursor: pointer;
+
+  mat-icon { width: 15px; height: 15px; font-size: 15px; }
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba(79, 209, 197, 0.45);
+    color: #4fd1c5;
+    outline: none;
+  }
+}
+
+.buyback-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.buyback-editor__label {
+  margin-right: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.65rem;
+}
+
+.history-section { margin-top: 8px; }
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-left: 3px solid #4fd1c5;
+  background: rgba(26, 39, 51, 0.45);
+  font-size: 0.7rem;
+
+  > div { display: flex; flex-direction: column; gap: 2px; }
+  span { color: var(--mat-sys-on-surface-variant); font-size: 0.65rem; }
+}
+
+.history-result {
+  align-items: flex-end;
+  color: #4fd1c5;
+  text-align: right;
+}
+
+.history-result--loss { color: #f87171; }
+
+.history-delete {
+  flex-shrink: 0;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.55;
+
+  &:hover,
+  &:focus-visible {
+    color: #f87171;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .history-row { gap: 6px; }
+  .history-result { margin-left: auto; }
+}
+
 .sell-price-editor {
   display: flex;
   align-items: center;

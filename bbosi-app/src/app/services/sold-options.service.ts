@@ -23,6 +23,8 @@ export interface SoldOption {
   stockPrice: number;
   optionPrice: number;
   lastRefresh?: string;
+  buybackPrice?: number;
+  buybackDate?: string;
 }
 
 export interface RollSignal {
@@ -47,7 +49,10 @@ export class SoldOptionsService {
   readonly soldOptions = this._soldOptions.asReadonly();
   readonly hasSyncToken = this._hasSyncToken.asReadonly();
 
+  readonly activeOptions = signal<SoldOption[]>([]);
+
   constructor() {
+    this.updateActiveOptions(this._soldOptions());
     void this.loadFromRemote();
   }
 
@@ -73,6 +78,7 @@ export class SoldOptionsService {
 
     const current = [...this._soldOptions(), sold];
     this._soldOptions.set(current);
+    this.updateActiveOptions(current);
     this.saveToStorage(current);
     this.syncToRemote(current);
   }
@@ -80,6 +86,7 @@ export class SoldOptionsService {
   remove(optionTicker: string): void {
     const current = this._soldOptions().filter(o => o.optionTicker !== optionTicker);
     this._soldOptions.set(current);
+    this.updateActiveOptions(current);
     this.saveToStorage(current);
     this.syncToRemote(current);
   }
@@ -100,12 +107,35 @@ export class SoldOptionsService {
       option.optionTicker === optionTicker ? { ...option, sellPrice } : option
     );
     this._soldOptions.set(current);
+    this.updateActiveOptions(current);
     this.saveToStorage(current);
     this.syncToRemote(current);
   }
 
   isSold(optionTicker: string): boolean {
-    return this._soldOptions().some(o => o.optionTicker === optionTicker);
+    return this.activeOptions().some(o => o.optionTicker === optionTicker);
+  }
+
+  buyback(optionTicker: string, buybackPrice: number): void {
+    if (!Number.isFinite(buybackPrice) || buybackPrice < 0) return;
+
+    const current = this._soldOptions().map(option =>
+      option.optionTicker === optionTicker && !option.buybackDate
+        ? { ...option, buybackPrice, buybackDate: new Date().toISOString() }
+        : option
+    );
+    this._soldOptions.set(current);
+    this.updateActiveOptions(current);
+    this.saveToStorage(current);
+    this.syncToRemote(current);
+  }
+
+  removeById(id: string): void {
+    const current = this._soldOptions().filter(option => option.id !== id);
+    this._soldOptions.set(current);
+    this.updateActiveOptions(current);
+    this.saveToStorage(current);
+    this.syncToRemote(current);
   }
 
   /**
@@ -178,6 +208,7 @@ export class SoldOptionsService {
         }
 
         this._soldOptions.set(updated);
+        this.updateActiveOptions(updated);
         this.saveToStorage(updated);
         this.syncToRemote(updated);
       }),
@@ -201,6 +232,7 @@ export class SoldOptionsService {
           expiration: new Date(option.expiration),
         }));
         this._soldOptions.set(normalized);
+        this.updateActiveOptions(normalized);
         this.saveToStorage(normalized);
       }),
       map(() => void 0),
@@ -277,6 +309,10 @@ export class SoldOptionsService {
 
   private saveToStorage(options: SoldOption[]): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(options));
+  }
+
+  private updateActiveOptions(options: SoldOption[]): void {
+    this.activeOptions.set(options.filter(option => !option.buybackDate));
   }
 
   setSyncToken(token: string): void {

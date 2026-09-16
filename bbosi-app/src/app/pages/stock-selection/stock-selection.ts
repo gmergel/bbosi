@@ -25,6 +25,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   private readonly ACTIVE_REFRESH_MS = 10000;
   editingSellTicker = signal<string | null>(null);
   sellPriceInput = signal<string>('');
+  buybackTicker = signal<string | null>(null);
+  buybackPriceInput = signal<string>('');
   isSyncTokenEditorOpen = signal<boolean>(false);
   syncTokenInput = signal<string>('');
 
@@ -132,6 +134,34 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
     this.soldOptionsService.updateSellPrice(sold.optionTicker, sellPrice);
     this.cancelEditSellPrice();
+  }
+
+  editBuybackPrice(sold: SoldOption, event: Event): void {
+    event.stopPropagation();
+    this.buybackTicker.set(sold.optionTicker);
+    this.buybackPriceInput.set((sold.optionPrice || 0).toFixed(2));
+  }
+
+  cancelBuyback(): void {
+    this.buybackTicker.set(null);
+    this.buybackPriceInput.set('');
+  }
+
+  confirmBuyback(sold: SoldOption, event: Event): void {
+    event.stopPropagation();
+    const price = Number(this.buybackPriceInput().replace(',', '.'));
+    if (!Number.isFinite(price) || price < 0) return;
+    this.soldOptionsService.buyback(sold.optionTicker, price);
+    this.cancelBuyback();
+  }
+
+  getRealizedProfit(sold: SoldOption): number {
+    return (sold.sellPrice - (sold.buybackPrice ?? 0)) * 100;
+  }
+
+  removeFromHistory(sold: SoldOption, event: Event): void {
+    event.stopPropagation();
+    this.soldOptionsService.removeById(sold.id);
   }
 
   getNvColor(nv: number): string {
