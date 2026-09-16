@@ -120,7 +120,7 @@ async function handlePositions(request, env, requestUrl) {
       ));
     }
 
-    await request.env.DB.batch(statements);
+    await env.DB.batch(statements);
     return json({ ok: true }, 200);
   }
 
