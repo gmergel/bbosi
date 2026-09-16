@@ -152,14 +152,63 @@
       @if (lastUpdated()) {
         <span class="timestamp"><mat-icon class="timestamp__icon">schedule</mat-icon>{{ lastUpdated() | relativeTime }}</span>
       }
-      <button mat-icon-button
-              type="button"
-              aria-label="Configurar sincronizacao"
-              matTooltip="Configurar sincronizacao"
-              (click)="configureSyncToken()">
-        <mat-icon>vpn_key</mat-icon>
-      </button>
+      @if (soldOptionsService.hasSyncToken()) {
+        <button mat-icon-button
+                type="button"
+                class="sync-status-button sync-status-button--active"
+                [matMenuTriggerFor]="syncMenu"
+                aria-label="Sincronizacao ativa"
+                matTooltip="Sincronizacao ativa">
+          <mat-icon>cloud_done</mat-icon>
+        </button>
+        <mat-menu #syncMenu="matMenu" xPosition="before">
+          <div class="sync-menu__status" mat-menu-item disabled>
+            <mat-icon>cloud_done</mat-icon>
+            <span>Sincronizacao ativa</span>
+          </div>
+          <button mat-menu-item type="button" (click)="unlinkSyncToken()">
+            <mat-icon>link_off</mat-icon>
+            <span>Desvincular token</span>
+          </button>
+        </mat-menu>
+      } @else {
+        <button mat-icon-button
+                type="button"
+                class="sync-status-button"
+                aria-label="Configurar sincronizacao"
+                matTooltip="Configurar sincronizacao"
+                (click)="configureSyncToken()">
+          <mat-icon>vpn_key</mat-icon>
+        </button>
+      }
     </div>
+    @if (isSyncTokenEditorOpen()) {
+      <div class="sync-token-editor" role="dialog" aria-label="Configurar sincronizacao">
+        <div class="sync-token-editor__copy">
+          <strong>Sincronizar entre dispositivos</strong>
+          <span>Use o mesmo token no computador e no celular.</span>
+        </div>
+        <div class="sync-token-editor__actions">
+          <input
+            type="password"
+            inputmode="text"
+            autocomplete="off"
+            placeholder="Token de sincronizacao"
+            [value]="syncTokenInput()"
+            (input)="syncTokenInput.set($any($event.target).value)"
+            (keydown.enter)="saveSyncToken()"
+            aria-label="Token de sincronizacao"
+          />
+          <button mat-icon-button type="button" (click)="cancelSyncToken()" aria-label="Cancelar" matTooltip="Cancelar">
+            <mat-icon>close</mat-icon>
+          </button>
+          <button mat-flat-button color="primary" type="button" (click)="saveSyncToken()" [disabled]="!syncTokenInput().trim()">
+            <mat-icon>check</mat-icon>
+            Salvar
+          </button>
+        </div>
+      </div>
+    }
     <div class="stocks-grid">
       @for (stock of stocks(); track stock.ticker) {
         <div class="stock-card glass"

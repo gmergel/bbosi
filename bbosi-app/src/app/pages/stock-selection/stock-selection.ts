@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
@@ -11,7 +12,7 @@ import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
 @Component({
   selector: 'app-stock-selection',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, MatTooltipModule, RelativeTimePipe],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule, RelativeTimePipe],
   templateUrl: './stock-selection.html',
   styleUrl: './stock-selection.scss',
 })
@@ -23,6 +24,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   private readonly ACTIVE_REFRESH_MS = 10000;
   editingSellTicker = signal<string | null>(null);
   sellPriceInput = signal<string>('');
+  isSyncTokenEditorOpen = signal<boolean>(false);
+  syncTokenInput = signal<string>('');
 
   Math = Math; // Expose Math for template
 
@@ -88,10 +91,24 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   configureSyncToken(): void {
-    const token = window.prompt('Informe o token de sincronizacao');
-    if (token?.trim()) {
-      this.soldOptionsService.setSyncToken(token);
-    }
+    this.syncTokenInput.set('');
+    this.isSyncTokenEditorOpen.set(true);
+  }
+
+  cancelSyncToken(): void {
+    this.isSyncTokenEditorOpen.set(false);
+    this.syncTokenInput.set('');
+  }
+
+  saveSyncToken(): void {
+    const token = this.syncTokenInput().trim();
+    if (!token) return;
+    this.soldOptionsService.setSyncToken(token);
+    this.cancelSyncToken();
+  }
+
+  unlinkSyncToken(): void {
+    this.soldOptionsService.clearSyncToken();
   }
 
   editSellPrice(sold: SoldOption, event: Event): void {

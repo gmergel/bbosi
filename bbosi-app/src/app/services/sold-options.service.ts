@@ -40,9 +40,11 @@ export class SoldOptionsService {
   private indicatorService = inject(IndicatorService);
   private http = inject(HttpClient);
   private _soldOptions = signal<SoldOption[]>(this.loadFromStorage());
+  private _hasSyncToken = signal<boolean>(this.hasStoredSyncToken());
   private isRefreshing = false;
 
   readonly soldOptions = this._soldOptions.asReadonly();
+  readonly hasSyncToken = this._hasSyncToken.asReadonly();
 
   constructor() {
     void this.loadFromRemote();
@@ -257,12 +259,20 @@ export class SoldOptionsService {
   }
 
   setSyncToken(token: string): void {
-    localStorage.setItem(SYNC_TOKEN_KEY, token.trim());
+    const normalizedToken = token.trim();
+    if (!normalizedToken) return;
+    localStorage.setItem(SYNC_TOKEN_KEY, normalizedToken);
+    this._hasSyncToken.set(true);
     void this.loadFromRemote();
   }
 
   clearSyncToken(): void {
     localStorage.removeItem(SYNC_TOKEN_KEY);
+    this._hasSyncToken.set(false);
+  }
+
+  private hasStoredSyncToken(): boolean {
+    return Boolean(localStorage.getItem(SYNC_TOKEN_KEY));
   }
 
   private loadFromRemote(): Promise<void> {
