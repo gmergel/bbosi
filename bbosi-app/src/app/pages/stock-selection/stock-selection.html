@@ -31,6 +31,16 @@
                 <span class="sold-card__nv-label">NV</span>
                 <span class="sold-card__nv-value">{{ sold.nv.toFixed(2) }}</span>
               </div>
+              @if (buybackTicker() !== sold.optionTicker) {
+                <button mat-icon-button
+                        type="button"
+                        class="buyback-button"
+                        (click)="editBuybackPrice(sold, $event)"
+                        [attr.aria-label]="'Registrar recompra de ' + sold.optionTicker"
+                        matTooltip="Registrar recompra">
+                  <mat-icon>shopping_cart_checkout</mat-icon>
+                </button>
+              }
               <button mat-icon-button class="sold-card__remove"
                       (click)="removeSold(sold.optionTicker, $event)"
                       [attr.aria-label]="'Remover venda ' + sold.optionTicker"
@@ -131,14 +141,8 @@
                     <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
                   </button>
-                  <span>Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
-                  <span>Alvo R${{ getTarget(sold).toFixed(2) }}</span>
-                  @if (buybackTicker() !== sold.optionTicker) {
-                    <button class="buyback-button" type="button" (click)="editBuybackPrice(sold, $event)" aria-label="Registrar recompra">
-                      <mat-icon>shopping_cart_checkout</mat-icon>
-                      <span>Recomprar</span>
-                    </button>
-                  }
+                  <span class="profit-meta__target">Alvo R${{ getTarget(sold).toFixed(2) }}</span>
+                  <span class="profit-meta__current">Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
                 </div>
               }
               @if (buybackTicker() === sold.optionTicker) {

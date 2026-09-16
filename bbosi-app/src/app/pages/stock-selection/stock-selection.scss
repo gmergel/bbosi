@@ -342,10 +342,12 @@
 }
 
 .sold-card__remove {
+  align-self: center;
   margin-left: auto;
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  line-height: 32px;
   opacity: 0.4;
 
   mat-icon {
@@ -459,13 +461,21 @@
 }
 
 .profit-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
-  justify-content: space-between;
   margin-top: 4px;
   font-size: 0.6rem;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.7;
+}
+
+.profit-meta__target {
+  text-align: center;
+}
+
+.profit-meta__current {
+  text-align: right;
 }
 
 .profit-meta__sale {
@@ -500,24 +510,31 @@
 }
 
 .buyback-button {
+  align-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin: -4px 0;
-  padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-left: 2px;
+  padding: 0;
+  line-height: 1;
+  border-radius: 0 !important;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--mat-sys-on-surface-variant);
-  font: inherit;
-  font-size: 0.6rem;
+  opacity: 0.65;
   cursor: pointer;
 
-  mat-icon { width: 15px; height: 15px; font-size: 15px; }
+  mat-icon { width: 18px; height: 18px; font-size: 18px; }
 
   &:hover,
   &:focus-visible {
-    border-color: rgba(79, 209, 197, 0.45);
+    border-color: rgba(79, 209, 197, 0.35);
+    background: rgba(79, 209, 197, 0.08);
     color: #4fd1c5;
+    opacity: 1;
     outline: none;
   }
 }
@@ -527,6 +544,19 @@
   align-items: center;
   gap: 4px;
   margin-top: 4px;
+}
+
+.buyback-editor button,
+.sell-price-editor button {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 0 !important;
+  line-height: 1;
 }
 
 .buyback-editor__label {
@@ -569,12 +599,17 @@
   flex-shrink: 0;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.55;
+  border-radius: 0 !important;
 
   &:hover,
   &:focus-visible {
     color: #f87171;
     opacity: 1;
   }
+}
+
+.sold-card__remove {
+  border-radius: 0 !important;
 }
 
 @media (max-width: 600px) {
