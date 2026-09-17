@@ -247,7 +247,7 @@ export class SoldOptionsService {
   getProfitCaptured(sold: SoldOption): number {
     const currentPrice = sold.optionPrice ?? sold.sellPrice;
     if (sold.sellPrice <= 0) return 0;
-    return Math.max(0, ((sold.sellPrice - currentPrice) / sold.sellPrice) * 100);
+    return ((sold.sellPrice - currentPrice) / sold.sellPrice) * 100;
   }
 
   /**
