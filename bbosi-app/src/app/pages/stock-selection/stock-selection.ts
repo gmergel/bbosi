@@ -244,6 +244,11 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return profit < 0 ? 50 - this.getProfitBarWidth(sold) : 50;
   }
 
+  getProfitCurrentPosition(sold: SoldOption): number {
+    const profit = Math.max(-100, Math.min(100, this.getProfitCaptured(sold)));
+    return 50 + profit / 2;
+  }
+
   getRollSignal(sold: SoldOption): RollSignal {
     return this.soldOptionsService.getRollSignal(sold);
   }

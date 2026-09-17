@@ -121,6 +121,10 @@
                 </div>
                 <div class="profit-bar__zero" matTooltip="Zero: sem lucro ou prejuízo"></div>
                 <div class="profit-bar__stop" matTooltip="Stop em -25%"></div>
+                   <span class="profit-bar__current-label"
+                      [style.left.%]="getProfitCurrentPosition(sold)">
+                     Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
+                   </span>
                 <div class="profit-bar__marker" style="left: 75%" matTooltip="Alvo 50%"></div>
               </div>
               @if (editingSellTicker() === sold.optionTicker) {
@@ -154,7 +158,6 @@
                   <span class="profit-meta__stop">Stop R${{ getStop(sold).toFixed(2) }}</span>
                   <span class="profit-meta__zero">Zero</span>
                   <span class="profit-meta__target">Alvo R${{ getTarget(sold).toFixed(2) }}</span>
-                  <span class="profit-meta__current">Atual R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}</span>
                 </div>
               }
               @if (buybackTicker() === sold.optionTicker) {

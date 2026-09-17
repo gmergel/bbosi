@@ -490,6 +490,15 @@
   background: #dc2626;
 }
 
+.profit-bar__current-label {
+  position: absolute;
+  top: -18px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.6rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .profit-meta {
   position: relative;
   display: flex;
@@ -518,11 +527,6 @@
 
 .profit-meta__target {
   left: 75%;
-}
-
-.profit-meta__current {
-  margin-left: auto;
-  text-align: right;
 }
 
 .profit-meta__sale {
