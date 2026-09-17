@@ -500,8 +500,8 @@
   padding: 3px 5px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 3px;
-  background: rgba(15, 23, 42, 0.95);
-  color: var(--mat-sys-on-surface);
+  background: rgba(30, 41, 59, 0.96);
+  color: #e2e8f0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
 
   &::after {
@@ -513,8 +513,42 @@
     height: 6px;
     border-right: 1px solid rgba(255, 255, 255, 0.14);
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(15, 23, 42, 0.95);
+    background: inherit;
     transform: translateX(-50%) rotate(45deg);
+  }
+
+  &.profit-current--loss {
+    border-color: rgba(248, 113, 113, 0.55);
+    background: rgba(127, 29, 29, 0.9);
+    color: #fca5a5;
+  }
+
+  &.profit-current--loss-severe {
+    border-color: rgba(220, 38, 38, 0.8);
+    background: rgba(127, 29, 29, 0.96);
+    color: #fecaca;
+  }
+
+  &.profit-current--low {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.profit-current--mid {
+    border-color: rgba(202, 138, 4, 0.7);
+    background: rgba(113, 63, 18, 0.92);
+    color: #fde68a;
+  }
+
+  &.profit-current--target {
+    border-color: rgba(22, 163, 74, 0.7);
+    background: rgba(20, 83, 45, 0.92);
+    color: #bbf7d0;
+  }
+
+  &.profit-current--high {
+    border-color: rgba(79, 209, 197, 0.7);
+    background: rgba(15, 118, 110, 0.92);
+    color: #ccfbf1;
   }
 }
 
