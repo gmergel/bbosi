@@ -492,11 +492,30 @@
 
 .profit-bar__current-label {
   position: absolute;
-  top: -18px;
+  top: -22px;
   transform: translateX(-50%);
   white-space: nowrap;
   font-size: 0.6rem;
-  color: var(--mat-sys-on-surface-variant);
+  line-height: 1;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--mat-sys-on-surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -4px;
+    width: 6px;
+    height: 6px;
+    border-right: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(15, 23, 42, 0.95);
+    transform: translateX(-50%) rotate(45deg);
+  }
 }
 
 .profit-meta {
