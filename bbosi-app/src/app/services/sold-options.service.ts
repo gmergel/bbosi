@@ -257,6 +257,10 @@ export class SoldOptionsService {
     const pctCaptured = this.getProfitCaptured(sold);
     const currentPrice = sold.optionPrice ?? sold.sellPrice;
 
+    if (sold.sellPrice > 0 && currentPrice >= sold.sellPrice * 1.25) {
+      return { shouldRoll: true, reason: 'Stop atingido — recomprar agora', severity: 'danger' };
+    }
+
     // Regra 0: Opção em pó — recomprar e rolar para próxima série
     if (currentPrice <= 0.05 && sold.tradingDays > 5) {
       return { shouldRoll: true, reason: 'Em pó — recomprar e rolar', severity: 'info' };
