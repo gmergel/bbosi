@@ -262,6 +262,13 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return 50 + profit / 2;
   }
 
+  getNvPosition(sold: SoldOption): number {
+    // Usa a mesma escala de preço->posição do stop/alvo, tratando o NV como um nível de preço.
+    if (sold.sellPrice <= 0) return 50;
+    const pct = ((sold.sellPrice - sold.nv) / sold.sellPrice) * 100;
+    return 50 + Math.max(-100, Math.min(100, pct)) / 2;
+  }
+
   getRollSignal(sold: SoldOption): RollSignal {
     return this.soldOptionsService.getRollSignal(sold);
   }
