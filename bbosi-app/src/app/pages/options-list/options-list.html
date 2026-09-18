@@ -177,6 +177,8 @@
             </div>
 
             <div class="option-row__vdxx">
+              <span class="nv-indicator" [class]="getNvClass(option.nv)"
+                    [matTooltip]="'NV ' + option.nv.toFixed(2)"></span>
               <div class="vdxx-bar-container">
                 <div class="vdxx-bar" [class]="getVdxxClass(option.vdxx)"
                      [style.width.%]="getVdxxBarWidth(option.vdxx)"></div>

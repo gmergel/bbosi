@@ -471,6 +471,18 @@
   flex-shrink: 0;
 }
 
+// Identifica o NV (Não Venda) da opção via cor do indicador
+.nv-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: default;
+
+  &.nv-positive { background: #16a34a; }
+  &.nv-negative { background: #dc2626; }
+}
+
 .vdxx-bar-container {
   flex: 1;
   height: 6px;
