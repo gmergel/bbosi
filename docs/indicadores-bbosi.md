@@ -6,7 +6,7 @@ O **GerBOSI** é um aplicativo Angular para análise de **venda coberta de opç�
 
 - Cálculo automático de indicadores (NV, VDX, VDXX, BOSI, GerBOSI)
 - Filtros inteligentes com 10 regras de elegibilidade
-- Monitoramento em tempo real de opções vendidas
+- Monitoramento periódico de opções vendidas (10 segundos com a aba visível)
 - Sinais de saída quantitativos (Roll Signals)
 - Análise de regime de volatilidade (IV Rank/Percentile)
 - Delta Score para seleção otimizada de strikes
@@ -111,7 +111,7 @@ BOSI = VE × %NumNeg
 ```
 
 - `%NumNeg` = negócios da opção / total de negócios da série × 100
-- Uso: marcador de STOP — quando BOSI da vendida sobe, considerar fechar
+- Uso: referência de pressão compradora — quando BOSI da vendida sobe, considerar fechar
 
 ---
 
@@ -123,7 +123,7 @@ BOSI = VE × %NumNeg
 GerBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
 ```
 
-Representa o **“centro de massa”** do mercado de opções. Usado como referência de stop: quando o GerBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
+Representa o **“centro de massa”** do mercado de opções. Usado como referência de limite de recompra: quando o GerBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
 
 ---
 
@@ -210,6 +210,8 @@ Monitora em tempo real quanto do prêmio vendido já foi "ganho":
 | 50-75% | Verde | Alvo atingido — considerar fechar |
 | 75-100% | Teal | Excelente — fechar ou deixar expirar |
 
+Além do percentual capturado, a barra marca o alvo de 50%, o ponto de equilibrio e o limite de recompra. O limite e calculado em 125% do preco de venda. Na legenda inferior da interface, ele aparece apenas como valor monetario, sem rotulo textual, pois a posicao identifica seu significado.
+
 **Por que alvo em 50%?**
 
 Evidência empírica (tastytrade, milhões de trades backtestados):
@@ -230,7 +232,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | 1 | Alvo atingido | % Capturado ≥ 50% E DTE > 5 | 🟢 Info | Fechar com lucro |
 | 2 | Prêmio esgotado | DTE ≤ 7 E % Capturado ≥ 75% | 🟢 Info | Rolar para próximo vencimento |
 | 3 | Gamma Risk | DTE ≤ 5 E % Capturado < 50% | 🔴 Danger | Fechar imediatamente |
-| 4 | GerBOSI pressão | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
+| 4 | Pressão do GerBOSI | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
 | 5 | NV negativo | NV < 0 | 🔴 Danger | Recomprar |
 
 **Gamma Risk explicado:** Nas últimas 5 sessões antes do vencimento, o gamma é máximo. Se a opção ainda tem prêmio significativo (< 50% capturado), qualquer movimento do ativo contra a posição pode transformar lucro em prejuízo rapidamente. É a zona mais perigosa para o vendedor.

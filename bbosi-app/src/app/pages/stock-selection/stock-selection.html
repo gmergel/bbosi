@@ -120,7 +120,7 @@
                      [class.profit-bar--loss-severe]="getProfitCaptured(sold) < -20">
                 </div>
                 <div class="profit-bar__zero" matTooltip="Zero: sem lucro ou prejuízo"></div>
-                <div class="profit-bar__stop" matTooltip="Stop em -25%"></div>
+                <div class="profit-bar__stop" matTooltip="Limite em -25%"></div>
                    <span class="profit-bar__current-label"
                         [style.left.%]="getProfitCurrentPosition(sold)"
                         [class.profit-current--loss]="getProfitCaptured(sold) < 0"
@@ -161,7 +161,7 @@
                     <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
                   </button>
-                  <span class="profit-meta__stop">Stop R${{ getStop(sold).toFixed(2) }}</span>
+                  <span class="profit-meta__stop">R${{ getStop(sold).toFixed(2) }}</span>
                   <span class="profit-meta__zero">Zero</span>
                   <span class="profit-meta__target">Alvo R${{ getTarget(sold).toFixed(2) }}</span>
                 </div>

@@ -1,156 +1,95 @@
 # PRD - GerBOSI App
 
-## Visão Geral
+## Visao geral
 
-Aplicação web simples em **Angular** para análise de opções de venda coberta, calculando os indicadores GerBOSI (VDX, VDXX, BOSI, GerBOSI, NV) para auxiliar o investidor na escolha da melhor opção para vender.
+O GerBOSI e uma aplicacao Angular para analise de venda coberta de calls da B3. A aplicacao combina dados de mercado, indicadores quantitativos e acompanhamento de posicoes vendidas para apoiar a selecao, o registro e a saida de operacoes.
 
----
+## Estado atual do produto
 
-## Stack Tecnológica
+O MVP funcional possui duas telas:
 
-- **Frontend:** Angular (última versão estável)
-- **Linguagem:** TypeScript
-- **Estilo:** CSS/SCSS simples
-- **API de dados:** A definir (cotações de ações e opções da B3)
+1. **Selecao de acoes**: lista ativos monitorados, cotacao, horario da ultima atualizacao e posicoes vendidas.
+2. **Lista de opcoes**: apresenta calls elegiveis, ranking por VDXX, indicadores detalhados e acao para registrar uma venda.
 
----
-
-## Funcionalidades - MVP
-
-### Tela 1: Seleção de Ação
-
-A tela inicial apresenta **4 cards** para escolha da ação-objeto:
+### Acoes monitoradas
 
 | Ticker | Empresa |
 |--------|---------|
 | BBAS3 | Banco do Brasil |
 | BBDC4 | Bradesco |
+| BBSE3 | BB Seguridade |
+| ITUB4 | Itau Unibanco |
+| KLBN4 | Klabin |
 | PETR4 | Petrobras |
 | VALE3 | Vale |
 
-**Comportamento:**
-- Exibir os 4 cards com ticker e nome da empresa
-- Ao clicar em um card, navegar para a Tela 2 com a ação selecionada
+## Tela de selecao
 
----
+- Exibe cotacao e horario de mercado de cada acao.
+- Permite abrir a lista de opcoes por clique, Enter ou Espaco.
+- Exibe vendas ativas com ticker, dias, preco, NV, GerBOSI, preco da acao e strike.
+- Atualiza posicoes automaticamente a cada 10 segundos quando a aba esta visivel.
+- Permite editar o preco de venda, registrar recompra, remover uma venda e remover registros do historico.
+- A barra de lucro mostra lucro capturado, alvo de 50%, ponto de equilibrio e o limite de recompra. Na legenda inferior, o limite aparece apenas como valor monetario, sem texto, pois sua posicao identifica a indicacao.
+- Permite configurar um token de sincronizacao para persistir posicoes no proxy/Cloudflare D1.
 
-### Tela 2: Lista de Opções (Calls)
+## Tela de opcoes
 
-Exibe as opções de compra (calls) disponíveis para a ação selecionada.
+- Busca dados de calls da acao selecionada.
+- Ordena por VDXX decrescente e permite filtrar por serie.
+- Oculta opcoes classificadas como **Nao Venda** por padrao, com controle para exibi-las.
+- Expande cada linha para mostrar gregas e indicadores.
+- Destaca a melhor oportunidade com maior VDXX positivo e elegivel.
+- Informa estado de carregamento, dados reais, dados simulados, ausencia de dados e erro de rede separadamente.
+- Exibe IV ATM, IV Rank, percentil e regime de volatilidade quando ha historico suficiente.
+- Permite registrar a venda e informar o preco efetivamente executado.
 
-**Filtros aplicados automaticamente:**
-- Tipo: somente **CALL** (opções de compra)
-- Vencimento: entre o **próximo vencimento** e no máximo **80 dias úteis** à frente
-- Séries: pode incluir até 2 vencimentos (o mais próximo e o seguinte, se dentro dos 80 dias)
+## Indicadores e regras
 
-**Dados exibidos por opção:**
+Os indicadores sao calculados no frontend a partir dos dados brutos recebidos:
 
-| Coluna | Descrição |
-|--------|-----------|
-| Ticker | Código da opção (ex: BBASA250) |
-| Strike | Preço de exercício |
-| Vencimento | Data de vencimento |
-| Pregões | Dias úteis até o vencimento |
-| Cotação | Último preço negociado |
-| VE | Valor Extrínseco |
-| Lastro% | Distância percentual do strike ao preço atual |
-| Delta | Grega Delta |
-| Gama | Grega Gama |
-| NV | Indicador NV (VE - Delta - Gama) |
-| VDX | Índice de eficiência da venda |
-| VDXX | VDX Estendido |
-| BOSI | Germano Options Strength Index |
-| Neg% | Percentual de negócios da série |
-
-**Cabeçalho da tela:**
-- Nome e ticker da ação selecionada
-- Preço atual da ação
-- **GerBOSI** da série (calculado e exibido em destaque)
-- Botão para voltar à tela de seleção
-
-**Comportamento:**
-- Opções com NV negativo devem ser exibidas com destaque visual (cinza/riscadas) indicando "Não Venda"
-- Ordenação padrão: por Strike crescente
-- Permitir reordenação por qualquer coluna
-
----
-
-## Regras de Negócio
-
-### Cálculo dos Indicadores
-
-Todos os indicadores devem ser calculados no frontend com base nos dados brutos recebidos da API.
-
-**NV:**
 ```
+VE = preco da opcao, se OTM/ATM
+VE = preco da opcao - valor intrinseco, se ITM
 NV = VE - (Delta + Gama)
-Se NV < 0 → marcar como "Não Venda"
+VDX = (NV / preco da opcao) * 100
+VDXX = Lastro% * (NV / preco) * 50 * FatorTempo * DeltaScore
+BOSI = VE * percentual de negocios da opcao
+GerBOSI = soma(Strike * BOSI) / soma(BOSI)
+Taxa anualizada = (VE / preco da acao) * (252 / dias uteis) * 100
 ```
 
-**BOSI:**
-```
-BOSI = VE × %NumNeg
-```
+Uma opcao e marcada como **Nao Venda** quando falha em uma regra de elegibilidade: preco minimo, liquidez media, lastro, prazo, VE, NV, faixa de delta, taxa anualizada ou IV maxima.
 
-**GerBOSI:**
-```
-GerBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
-```
+O filtro usa media de negocios dos ultimos cinco pregoes; o BOSI usa os negocios do dia. O DeltaScore favorece delta proximo de 0,20.
 
-**VDXX:**
-```
-VDXX = Lastro% × (NV / Cotação_opção) × 50 × (1,3 - num_pregões / 100)
-```
+## Monitoramento e saida
 
-**Lastro%:**
-```
-Lastro% = (Strike - Preço_ação) / Preço_ação × 100
-```
+O servico de posicoes atualiza preco da acao, preco da opcao, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saida consideram alvo de 50% do premio capturado, proximidade do vencimento, risco de gamma, pressao do GerBOSI e NV negativo.
 
-**VE (Valor Extrínseco):**
-```
-Se Strike > Preço_ação (OTM): VE = Cotação da opção
-Se Strike ≤ Preço_ação (ITM): VE = Cotação - (Preço_ação - Strike)
-```
+O alvo de recompra e 50% do premio vendido. O limite de recompra visual e calculado como 125% do preco de venda. O texto da interface usa apenas o valor desse limite; a regra e mantida no servico de posicoes.
 
-### Gregas (Black-Scholes)
+## Dados e persistencia
 
-As gregas (Delta, Gama, Theta) devem ser calculadas usando o modelo Black-Scholes com:
-- Volatilidade Histórica de 21 dias (ou recebida da API)
-- Taxa Selic vigente (ou recebida da API)
-- Dias úteis até o vencimento
+- Desenvolvimento: Angular servido localmente com `npm run start`, usando rotas do proxy em `/api`.
+- Producao: frontend estatico no GitHub Pages e Cloudflare Worker como proxy proprio.
+- Fontes: Yahoo Finance, opcoes.net.br e API VendaCoberta.
+- Posicoes, historico de IV e historico de liquidez sao armazenados no `localStorage`.
+- Posicoes podem ser sincronizadas remotamente em D1 mediante token configurado pelo usuario.
+- Quando o mercado esta fechado ou as fontes nao respondem, a aplicacao pode usar cache ou dados simulados e informa o estado na tela.
 
----
+## Requisitos nao funcionais
 
-## Requisitos Não-Funcionais
+- Layout responsivo para desktop e mobile.
+- Interacoes principais acessiveis por teclado e com nomes ARIA.
+- Atualizacao sem sobrepor consultas de posicoes em andamento.
+- Separacao explicita entre loading, pronto, mock, vazio e erro.
+- Nenhum segredo embutido no frontend; o token de sincronizacao fica no dispositivo do usuario.
 
-- Responsivo (mobile-friendly)
-- Carregamento rápido (< 2s)
-- Sem autenticação no MVP
-- Dados podem ser mockados inicialmente para desenvolvimento
+## Fora do escopo atual
 
----
-
-## Fora do Escopo (MVP)
-
-- Cálculo de THEX e LIMITEX
-- Histórico de operações
-- Simulação de vendas
-- Opções de PUT
-- Mais de 4 ações
-- Alertas/notificações
-- Persistência de dados
-- Backend próprio
-
----
-
-## Estrutura de Navegação
-
-```
-[Tela 1: Seleção de Ação]
-    |
-    ├── BBAS3 ──→ [Tela 2: Lista de Calls BBAS3]
-    ├── BBDC4 ──→ [Tela 2: Lista de Calls BBDC4]
-    ├── PETR4 ──→ [Tela 2: Lista de Calls PETR4]
-    └── VALE3 ──→ [Tela 2: Lista de Calls VALE3]
-```
+- Opcoes PUT.
+- Simulacao completa de carteira.
+- Alertas push ou notificacoes externas.
+- Autenticacao de usuarios.
+- Historico analitico avancado e backtesting.
