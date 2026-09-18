@@ -176,21 +176,34 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return 'safe';
   }
 
-  getBarFillLeft(sold: SoldOption): number {
+  private getBarFillBounds(sold: SoldOption): { left: number; width: number } {
     const bbosi = sold.bbosi || 0;
-    if (!bbosi) return this.getMarkerPosition(sold.stockPrice, sold);
+    if (!bbosi) {
+      return { left: this.getMarkerPosition(sold.stockPrice, sold), width: 0 };
+    }
     const left = Math.min(sold.stockPrice, bbosi);
-    return this.getMarkerPosition(left, sold);
+    const right = Math.max(sold.stockPrice, bbosi);
+    let leftPos = this.getMarkerPosition(left, sold);
+    let rightPos = this.getMarkerPosition(right, sold);
+
+    // Garante uma largura mínima visível sem ultrapassar os indicadores:
+    // cresce simetricamente a partir do centro e limita ao intervalo [0, 100].
+    const minWidth = 2;
+    if (rightPos - leftPos < minWidth) {
+      const center = (leftPos + rightPos) / 2;
+      leftPos = Math.max(0, center - minWidth / 2);
+      rightPos = Math.min(100, center + minWidth / 2);
+    }
+
+    return { left: leftPos, width: Math.max(0, rightPos - leftPos) };
+  }
+
+  getBarFillLeft(sold: SoldOption): number {
+    return this.getBarFillBounds(sold).left;
   }
 
   getBarFillWidth(sold: SoldOption): number {
-    const bbosi = sold.bbosi || 0;
-    if (!bbosi) return 0;
-    const left = Math.min(sold.stockPrice, bbosi);
-    const right = Math.max(sold.stockPrice, bbosi);
-    const leftPos = this.getMarkerPosition(left, sold);
-    const rightPos = this.getMarkerPosition(right, sold);
-    return Math.max(2, rightPos - leftPos);
+    return this.getBarFillBounds(sold).width;
   }
 
   getBarLastro(sold: SoldOption): number {
