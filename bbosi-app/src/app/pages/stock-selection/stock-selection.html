@@ -94,6 +94,9 @@
                     <span [class]="'label--' + item.type">{{ item.label }}</span>
                   }
                 </div>
+                <div class="bar-scale__nv" [style.color]="getNvColor(sold.nv)" matTooltip="NV (Não Venda)">
+                  NV {{ sold.nv.toFixed(2) }}
+                </div>
               </div>
             </div>
 
