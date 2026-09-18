@@ -118,7 +118,7 @@
                         [class.profit-current--mid]="getProfitCaptured(sold) >= 25 && getProfitCaptured(sold) < 50"
                         [class.profit-current--target]="getProfitCaptured(sold) >= 50 && getProfitCaptured(sold) < 75"
                         [class.profit-current--high]="getProfitCaptured(sold) >= 75">
-                    {{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
+                    R$ {{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
                    </span>
                 <div class="profit-bar__marker" style="left: 75%" matTooltip="Alvo 50%"></div>
                 <div class="profit-bar__marker profit-bar__marker--nv"
