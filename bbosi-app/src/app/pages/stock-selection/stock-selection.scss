@@ -428,7 +428,7 @@
   }
 
   &.profit--loss-severe {
-    color: #dc2626;
+    color: #d96a6a;
   }
 }
 
@@ -464,7 +464,7 @@
     background: #f87171;
   }
   &.profit-bar--loss-severe {
-    background: #dc2626;
+    background: #d96a6a;
   }
 }
 
@@ -488,7 +488,7 @@
 .profit-bar__stop {
   left: 37.5%;
   height: 12px;
-  background: #dc2626;
+  background: #d96a6a;
 }
 
 .profit-bar__current-label {
@@ -525,9 +525,9 @@
   }
 
   &.profit-current--loss-severe {
-    border-color: rgba(220, 38, 38, 0.8);
-    background: rgba(127, 29, 29, 0.96);
-    color: #fecaca;
+    border-color: rgba(217, 106, 106, 0.7);
+    background: rgba(140, 72, 72, 0.9);
+    color: #f7d5d5;
   }
 
   &.profit-current--low {
@@ -574,7 +574,8 @@
 .profit-meta__stop {
   left: 37.5%;
   transform: translateX(-50%);
-  color: #f87171;
+  color: #d96a6a;
+  font-weight: 700;
 }
 
 .profit-meta__target {

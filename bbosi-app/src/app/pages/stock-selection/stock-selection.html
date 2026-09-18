@@ -130,7 +130,7 @@
               @if (editingSellTicker() === sold.optionTicker) {
                 <div class="sell-price-editor" (click)="$event.stopPropagation()">
                   <label class="sell-price-editor__input-wrap">
-                    <span>Venda R$</span>
+                    <span>R$</span>
                     <input
                       inputmode="decimal"
                       type="text"
@@ -158,7 +158,7 @@
                     {{ getProfitCaptured(sold).toFixed(0) }}%
                   </span>
                   <button class="profit-meta__sale" type="button" (click)="editSellPrice(sold, $event)" aria-label="Editar preco de venda">
-                    <span><span class="profit-meta__sale-label">Venda </span>R${{ sold.sellPrice.toFixed(2) }}</span>
+                    <span>R${{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
                   </button>
                   <span class="profit-meta__stop">R${{ getStop(sold).toFixed(2) }}</span>
