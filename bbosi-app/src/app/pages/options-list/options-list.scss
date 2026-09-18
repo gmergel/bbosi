@@ -613,6 +613,8 @@
 .detail-actions {
   margin-top: 12px;
   display: flex;
+  align-items: center;
+  gap: 16px;
   justify-content: flex-end;
 
   button {
@@ -620,6 +622,27 @@
       margin-right: 4px;
     }
   }
+}
+
+.daily-target {
+  margin-right: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+
+  &__label,
+  &__hint {
+    font-size: 0.68rem;
+  }
+
+  strong {
+    font-size: 0.95rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  &--up strong { color: #4fd1c5; }
+  &--down strong { color: #f87171; }
 }
 
 // ===== RESPONSIVE =====
@@ -630,6 +653,8 @@
   .option-row__vdxx { width: 80px; }
   .best-pick__details { gap: 8px; font-size: 0.8rem; }
   .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-actions { align-items: stretch; flex-direction: column; }
+  .daily-target { margin-right: 0; flex-wrap: wrap; gap: 4px 8px; }
   .sell-confirm__heading { align-items: flex-start; flex-direction: column; gap: 2px; }
   .sell-confirm__controls { justify-content: stretch; }
   .sell-confirm__controls > button:last-child { flex: 1; }

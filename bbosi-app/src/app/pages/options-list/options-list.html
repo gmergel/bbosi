@@ -261,6 +261,11 @@
                 </div>
               </div>
               <div class="detail-actions">
+                <div class="daily-target" [class.daily-target--up]="getDailyTargetMove(option) > 0" [class.daily-target--down]="getDailyTargetMove(option) < 0">
+                  <span class="daily-target__label">Alvo diário</span>
+                  <strong>{{ getDailyTargetMove(option) >= 0 ? '+' : '' }}{{ getDailyTargetMove(option).toFixed(2) }}%/dia</strong>
+                  <span class="daily-target__hint">{{ getDailyTargetDirection(option) }} até o strike em {{ option.tradingDays }} pregões</span>
+                </div>
                 @if (!isSold(option.ticker)) {
                   @if (sellingTicker() !== option.ticker) {
                     <button mat-flat-button color="primary" (click)="sellOption(option, $event)">

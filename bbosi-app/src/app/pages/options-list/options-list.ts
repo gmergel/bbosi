@@ -169,6 +169,18 @@ export class OptionsListComponent implements OnInit {
     return Math.min(100, Math.max(0, vdxx));
   }
 
+  getDailyTargetMove(option: OptionIndicators): number {
+    const stockPrice = this.stock()?.price ?? 0;
+    if (stockPrice <= 0 || option.strike <= 0 || option.tradingDays <= 0) return 0;
+
+    return (Math.pow(option.strike / stockPrice, 1 / option.tradingDays) - 1) * 100;
+  }
+
+  getDailyTargetDirection(option: OptionIndicators): string {
+    const move = this.getDailyTargetMove(option);
+    return move > 0 ? 'subir' : move < 0 ? 'descer' : 'manter';
+  }
+
   isSold(optionTicker: string): boolean {
     return this.soldOptionsService.isSold(optionTicker);
   }

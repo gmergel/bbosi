@@ -574,6 +574,7 @@
 .profit-meta__stop {
   left: 37.5%;
   transform: translateX(-50%);
+  color: #f87171;
 }
 
 .profit-meta__target {
@@ -841,4 +842,5 @@
 @media (max-width: 480px) {
   .hero__title { font-size: 2.2rem; }
   .sold-card__metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .profit-meta__sale-label { display: none; }
 }

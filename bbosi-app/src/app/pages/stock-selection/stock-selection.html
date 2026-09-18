@@ -158,7 +158,7 @@
                     {{ getProfitCaptured(sold).toFixed(0) }}%
                   </span>
                   <button class="profit-meta__sale" type="button" (click)="editSellPrice(sold, $event)" aria-label="Editar preco de venda">
-                    <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
+                    <span><span class="profit-meta__sale-label">Venda </span>R${{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
                   </button>
                   <span class="profit-meta__stop">R${{ getStop(sold).toFixed(2) }}</span>
