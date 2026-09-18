@@ -169,10 +169,6 @@ export class OptionsListComponent implements OnInit {
     return Math.min(100, Math.max(0, vdxx));
   }
 
-  getNvClass(nv: number): string {
-    return nv >= 0 ? 'nv-positive' : 'nv-negative';
-  }
-
   getDailyTargetMove(option: OptionIndicators): number {
     const stockPrice = this.stock()?.price ?? 0;
     if (stockPrice <= 0 || option.strike <= 0 || option.tradingDays <= 0) return 0;
