@@ -26,11 +26,6 @@
                 <span class="sold-card__ticker">{{ sold.optionTicker }}</span>
                 <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}@if (sold.lastRefresh) { · <mat-icon class="sold-card__date-icon">schedule</mat-icon>{{ sold.lastRefresh | relativeTime }}}</span>
               </div>
-              <div class="sold-card__nv" [class.text-green]="sold.nv > 0" [class.text-red]="sold.nv <= 0"
-                   matTooltip="NV (Não Venda)">
-                <span class="sold-card__nv-label">NV</span>
-                <span class="sold-card__nv-value">{{ sold.nv.toFixed(2) }}</span>
-              </div>
               @if (buybackTicker() !== sold.optionTicker) {
                 <button mat-icon-button
                         type="button"

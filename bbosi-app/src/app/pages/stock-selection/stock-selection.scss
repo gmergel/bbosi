@@ -320,27 +320,6 @@
   opacity: 0.7;
 }
 
-.sold-card__nv {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sold-card__nv-label {
-  font-size: 0.55rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.7;
-}
-
-.sold-card__nv-value {
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
 .sold-card__remove {
   align-self: center;
   margin-left: auto;
