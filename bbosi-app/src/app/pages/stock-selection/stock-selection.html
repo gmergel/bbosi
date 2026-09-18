@@ -118,13 +118,13 @@
                         [class.profit-current--mid]="getProfitCaptured(sold) >= 25 && getProfitCaptured(sold) < 50"
                         [class.profit-current--target]="getProfitCaptured(sold) >= 50 && getProfitCaptured(sold) < 75"
                         [class.profit-current--high]="getProfitCaptured(sold) >= 75">
-                    R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
+                    {{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
                    </span>
                 <div class="profit-bar__marker" style="left: 75%" matTooltip="Alvo 50%"></div>
                 <div class="profit-bar__marker profit-bar__marker--nv"
                      [style.left.%]="getNvPosition(sold)"
                      [style.background]="getNvColor(sold.nv)"
-                     matTooltip="NV R${{ sold.nv.toFixed(2) }}"></div>
+                     matTooltip="NV {{ sold.nv.toFixed(2) }}"></div>
               </div>
               @if (editingSellTicker() === sold.optionTicker) {
                 <div class="sell-price-editor" (click)="$event.stopPropagation()">
@@ -157,7 +157,7 @@
                     {{ getProfitCaptured(sold).toFixed(0) }}%
                   </span>
                   <button class="profit-meta__sale" type="button" (click)="editSellPrice(sold, $event)" aria-label="Editar preco de venda">
-                    <span>R${{ sold.sellPrice.toFixed(2) }}</span>
+                    <span>{{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
                   </button>
                   <span class="profit-meta__stop">{{ getStop(sold).toFixed(2) }}</span>
