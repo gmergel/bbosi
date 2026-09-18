@@ -163,6 +163,7 @@
                   </button>
                   <span class="profit-meta__stop">R${{ getStop(sold).toFixed(2) }}</span>
                   <span class="profit-meta__target">Alvo R${{ getTarget(sold).toFixed(2) }}</span>
+                  <span class="profit-meta__nv" [style.color]="getNvColor(sold.nv)" matTooltip="NV (Não Venda)">NV {{ sold.nv.toFixed(2) }}</span>
                 </div>
               }
               @if (buybackTicker() === sold.optionTicker) {

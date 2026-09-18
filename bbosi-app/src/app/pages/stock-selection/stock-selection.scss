@@ -566,7 +566,8 @@
 
 .profit-meta__stop,
 .profit-meta__target,
-.profit-meta__percentage {
+.profit-meta__percentage,
+.profit-meta__nv {
   position: absolute;
   white-space: nowrap;
 }
@@ -581,6 +582,12 @@
 .profit-meta__target {
   left: 75%;
   transform: translateX(-50%);
+}
+
+.profit-meta__nv {
+  left: 100%;
+  transform: translateX(-100%);
+  font-weight: 700;
 }
 
 .profit-meta__percentage {
