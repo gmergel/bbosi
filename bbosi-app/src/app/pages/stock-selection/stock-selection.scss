@@ -434,6 +434,7 @@
 
 .profit-bar {
   position: relative;
+  margin-top: 20px;
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 0;
@@ -556,14 +557,14 @@
   position: relative;
   display: flex;
   align-items: center;
-  margin-top: 4px;
+  min-height: 24px;
+  margin-top: 10px;
   font-size: 0.6rem;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.7;
 }
 
 .profit-meta__stop,
-.profit-meta__zero,
 .profit-meta__target {
   position: absolute;
   transform: translateX(-50%);
@@ -574,20 +575,19 @@
   left: 37.5%;
 }
 
-.profit-meta__zero {
-  left: 50%;
-}
-
 .profit-meta__target {
   left: 75%;
 }
 
 .profit-meta__sale {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 3px;
   min-height: 28px;
-  margin: -4px 0;
+  margin: 0;
   padding: 4px 6px;
   border: 1px solid transparent;
   background: transparent;
