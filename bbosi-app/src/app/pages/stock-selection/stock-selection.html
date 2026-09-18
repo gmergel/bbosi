@@ -101,12 +101,6 @@
             <div class="sold-card__profit">
               <div class="profit-header">
                 <span class="profit-label">Lucro capturado</span>
-                <span class="profit-value"
-                      [class.profit--target]="getProfitCaptured(sold) >= 50"
-                      [class.profit--loss]="getProfitCaptured(sold) < 0"
-                      [class.profit--loss-severe]="getProfitCaptured(sold) < -20">
-                  {{ getProfitCaptured(sold).toFixed(0) }}%
-                </span>
               </div>
               <div class="profit-bar">
                 <div class="profit-bar__fill"
@@ -157,6 +151,12 @@
                 </div>
               } @else {
                 <div class="profit-meta">
+                  <span class="profit-value profit-meta__percentage"
+                        [class.profit--target]="getProfitCaptured(sold) >= 50"
+                        [class.profit--loss]="getProfitCaptured(sold) < 0"
+                        [class.profit--loss-severe]="getProfitCaptured(sold) < -20">
+                    {{ getProfitCaptured(sold).toFixed(0) }}%
+                  </span>
                   <button class="profit-meta__sale" type="button" (click)="editSellPrice(sold, $event)" aria-label="Editar preco de venda">
                     <span>Venda R${{ sold.sellPrice.toFixed(2) }}</span>
                     <mat-icon matTooltip="Editar preco executado">edit</mat-icon>
