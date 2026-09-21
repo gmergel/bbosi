@@ -319,7 +319,7 @@
                 <span class="stock-card__time"><mat-icon class="stock-card__time-icon">schedule</mat-icon>{{ stock.marketTime | relativeTime }}</span>
               }
             } @else {
-              <span class="stock-card__loading">--</span>
+              <span class="stock-card__loading" title="Cotação indisponível">Indisponível</span>
             }
           </div>
           <mat-icon class="stock-card__arrow">chevron_right</mat-icon>

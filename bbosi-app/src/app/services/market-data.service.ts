@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, forkJoin, of, catchError, switchMap, throwError, timeout } from 'rxjs';
 import { Stock, OptionData } from '../models/stock.model';
-import { MockDataService } from './mock-data.service';
 import { environment } from '../../environments/environment';
 
 export interface OptionsChainResponse {
@@ -80,12 +79,9 @@ export interface OptionWithGreeks extends OptionData {
 @Injectable({ providedIn: 'root' })
 export class MarketDataService {
   private http = inject(HttpClient);
-  private mock = inject(MockDataService);
   private yahooBaseUrls = this.getBaseUrls('yahoo');
   private opcoesBaseUrls = this.getBaseUrls('opcoes');
   private vendacobertaBaseUrls = this.getBaseUrls('vendacoberta');
-  private readonly OPTIONS_CACHE_TTL_MS = 30 * 60 * 1000;
-  private readonly PRICE_CACHE_TTL_MS = 15 * 60 * 1000;
 
   private stocks: Stock[] = [
     { ticker: 'BBAS3', name: 'Banco do Brasil', price: 0 },
@@ -115,7 +111,7 @@ export class MarketDataService {
 
   /**
    * Busca cotação atual da ação via Yahoo Finance (fonte mais rápida e confiável para preços).
-   * Fallback: vendacoberta → cache.
+  * Fallback: vendacoberta.
    */
   fetchStockPrice(ticker: string): Observable<{ price: number; marketTime: Date | null }> {
     return this.fetchStockPriceYahoo(ticker).pipe(
@@ -126,10 +122,9 @@ export class MarketDataService {
           map(stocks => {
             const found = stocks.find(s => s.symbol === ticker);
             if (found && found.close > 0) {
-              this.cachePrice(ticker, found.close);
               return { price: found.close, marketTime: new Date() };
             }
-            return { price: this.getCachedPrice(ticker), marketTime: null as Date | null };
+            return { price: 0, marketTime: null as Date | null };
           })
         );
       })
@@ -152,11 +147,7 @@ export class MarketDataService {
       }),
       catchError(() => of({ price: 0, marketTime: null as Date | null })),
       switchMap(data => {
-        if (data.price > 0) {
-          this.cachePrice(ticker, data.price);
-          return of(data);
-        }
-        return of({ price: this.getCachedPrice(ticker), marketTime: null as Date | null });
+        return of(data);
       })
     );
   }
@@ -164,15 +155,12 @@ export class MarketDataService {
   /**
    * Busca opções (calls) de uma ação.
    * Fonte principal: vendacoberta POST /api/v1/options.
-   * Fallback: opcoes.net.br OptionsChain → cache.
+  * Fallback: opcoes.net.br OptionsChain.
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
     return this.fetchOptionsVendaCoberta(ticker).pipe(
       switchMap(options => {
-        if (options.length > 0) {
-          this.cacheOptions(ticker, options);
-          return of(options);
-        }
+        if (options.length > 0) return of(options);
         // Fallback: opcoes.net.br
         return this.fetchOptionsOpcoes(ticker);
       })
@@ -207,65 +195,18 @@ export class MarketDataService {
 
     return this.getWithFallback<OptionsChainResponse>(this.opcoesBaseUrls, path).pipe(
       map(res => this.parseOptionsChain(res, ticker)),
-      map(options => {
-        if (options.length > 0) {
-          this.cacheOptions(ticker, options);
-          return options;
-        }
-        return this.getCachedOptions(ticker);
-      }),
+      map(options => options),
       catchError(err => {
         console.error(`Erro ao buscar opções de ${ticker} (opcoes.net.br):`, err);
-        return of(this.getCachedOptions(ticker));
+        return of([] as OptionWithGreeks[]);
       })
     );
-  }
-
-  private cacheOptions(ticker: string, options: OptionWithGreeks[]): void {
-    const data = { options, timestamp: Date.now() };
-    localStorage.setItem(`bbosi-options-${ticker}`, JSON.stringify(data));
-  }
-
-  private getCachedOptions(ticker: string): OptionWithGreeks[] {
-    try {
-      const raw = localStorage.getItem(`bbosi-options-${ticker}`);
-      if (!raw) return [];
-      const { options, timestamp } = JSON.parse(raw);
-      if (this.isCacheExpired(timestamp, this.OPTIONS_CACHE_TTL_MS)) return [];
-      return (options || []).map((o: any) => ({
-        ...o,
-        expiration: new Date(o.expiration),
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  private cachePrice(ticker: string, price: number): void {
-    localStorage.setItem(`bbosi-price-${ticker}`, JSON.stringify({ price, timestamp: Date.now() }));
-  }
-
-  private getCachedPrice(ticker: string): number {
-    try {
-      const raw = localStorage.getItem(`bbosi-price-${ticker}`);
-      if (!raw) return 0;
-      const { price, timestamp } = JSON.parse(raw);
-      if (this.isCacheExpired(timestamp, this.PRICE_CACHE_TTL_MS)) return 0;
-      return price || 0;
-    } catch {
-      return 0;
-    }
-  }
-
-  private isCacheExpired(timestamp: number | undefined, ttlMs: number): boolean {
-    if (!timestamp || timestamp <= 0) return true;
-    return Date.now() - timestamp > ttlMs;
   }
 
   /**
    * Busca cotação + opções em paralelo (fonte principal: vendacoberta)
    */
-  fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; isMock: boolean; timestamp: Date }> {
+  fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; timestamp: Date }> {
     const stock = this.stocks.find(s => s.ticker === ticker) || {
       ticker,
       name: ticker,
@@ -276,40 +217,19 @@ export class MarketDataService {
       priceData: this.fetchStockPrice(ticker),
       options: this.fetchOptions(ticker),
     }).pipe(
-      map(({ priceData, options }) => {
-        let price = priceData.price;
+      switchMap(({ priceData, options }) => {
+        const price = priceData.price;
         const timestamp = priceData.marketTime || new Date();
 
-        // Se não conseguiu preço de nenhuma fonte, infere pelas opções
-        if (price === 0 && options.length > 0) {
-          price = this.inferPriceFromOptions(options);
+        if (price <= 0 || options.length === 0) {
+          return throwError(() => new Error(`Não foi possível obter dados atuais de ${ticker}.`));
         }
 
-        // Fallback: preço cacheado
-        if (price === 0) {
-          price = this.getCachedPrice(ticker);
-        } else {
-          this.cachePrice(ticker, price);
-        }
-
-        // Se ainda sem dados, usa mock
-        if (options.length === 0) {
-          const mockData = this.mock.generateOptions(ticker);
-          if (price === 0) price = this.mock.getStockPrice(ticker);
-          return {
-            stock: { ...stock, price },
-            options: mockData,
-            isMock: true,
-            timestamp,
-          };
-        }
-
-        return {
+        return of({
           stock: { ...stock, price },
           options,
-          isMock: false,
           timestamp,
-        };
+        });
       })
     );
   }
@@ -372,37 +292,6 @@ export class MarketDataService {
       return [legacy, ...normalized];
     }
     return normalized;
-  }
-
-  /**
-   * Infere o preço da ação a partir dos dados das opções.
-   * Método principal: usa "Distância % do Strike":
-   *   cotação = strike / (1 + distância% / 100)
-   * Fallback: ATM ou delta mais próximo de 0.5.
-   */
-  private inferPriceFromOptions(options: OptionWithGreeks[]): number {
-    // Método 1: usar distancePercent
-    const withDistance = options.filter(o => o.distancePercent !== 0);
-    if (withDistance.length > 0) {
-      const sorted = [...withDistance].sort(
-        (a, b) => Math.abs(a.distancePercent) - Math.abs(b.distancePercent)
-      );
-      const closest = sorted[0];
-      const inferred = closest.strike / (1 + closest.distancePercent / 100);
-      if (Number.isFinite(inferred) && inferred > 0) {
-        return inferred;
-      }
-    }
-
-    // Método 2: opção ATM → strike ≈ preço
-    const atm = options.find(o => o.moneyness === 'ATM');
-    if (atm) return atm.strike;
-
-    // Método 3: delta mais próximo de 0.5
-    const byDelta = [...options].sort(
-      (a, b) => Math.abs(a.delta - 0.5) - Math.abs(b.delta - 0.5)
-    );
-    return byDelta[0]?.strike ?? 0;
   }
 
   /**

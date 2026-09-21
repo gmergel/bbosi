@@ -71,13 +71,6 @@
     </div>
   }
 
-  @if (!loading() && dataState() === 'mock') {
-    <div class="mock-banner">
-      <mat-icon>info</mat-icon>
-      <span>Dados simulados — mercado fechado ou sem resposta do opcoes.net.br. Dados reais disponiveis em dias uteis das 10h as 17h.</span>
-    </div>
-  }
-
   @if (!loading() && dataState() === 'error') {
     <div class="empty-state">
       <mat-icon class="empty-state__icon">wifi_off</mat-icon>
@@ -89,14 +82,15 @@
 
   @if (!loading() && dataState() === 'empty') {
     <div class="empty-state">
-      <mat-icon class="empty-state__icon">schedule</mat-icon>
-      <h2>Dados indisponiveis</h2>
-      <p>O opcoes.net.br so fornece dados durante o pregao da B3 (10h-17h).</p>
-      <p class="empty-state__hint">Acesse durante o horario de mercado para carregar os dados. Apos a primeira carga, eles ficam disponiveis em cache.</p>
+      <mat-icon class="empty-state__icon">cloud_off</mat-icon>
+      <h2>Dados não disponíveis</h2>
+      <p>Não foi possível obter opções reais para esta ação agora.</p>
+      <p class="empty-state__hint">Verifique a conexão ou tente novamente durante o horário de negociação.</p>
+      <button mat-flat-button color="primary" (click)="retryLoad()">Tentar novamente</button>
     </div>
   }
 
-  @if (!loading() && (dataState() === 'ready' || dataState() === 'mock')) {
+  @if (!loading() && dataState() === 'ready') {
     <!-- Card destaque: melhor opcao -->
     @if (bestOption(); as best) {
       <section class="best-pick">

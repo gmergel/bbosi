@@ -2,7 +2,7 @@
 
 Aplicação Angular para análise de calls de venda coberta no GerBOSI.
 
-O frontend possui seleção de ações, ranking de opções por VDXX, filtros de elegibilidade, taxa mensal estimada, alvo diário composto até o strike, histórico de IV/liquidez e monitoramento de posições vendidas. Os cards de vendas exibem o NV com cores e orientação contextual. A documentação funcional está em `../docs/PRD.md`.
+O frontend possui seleção de ações, ranking de opções por VDXX, filtros de elegibilidade, taxa mensal estimada, alvo diário composto até o strike, histórico de IV/liquidez e monitoramento de posições vendidas. Os cards de vendas exibem o NV com cores e orientação contextual. Quando as fontes não podem ser consultadas, o app informa a indisponibilidade e não usa dados simulados. A documentação funcional está em `../docs/PRD.md`.
 
 ## Development server
 

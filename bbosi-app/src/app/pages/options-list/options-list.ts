@@ -14,7 +14,7 @@ import { IndicatorService, VolRegime } from '../../services/indicator.service';
 import { SoldOptionsService } from '../../services/sold-options.service';
 import { Stock, OptionIndicators } from '../../models/stock.model';
 
-type OptionsDataState = 'loading' | 'ready' | 'empty' | 'mock' | 'error';
+type OptionsDataState = 'loading' | 'ready' | 'empty' | 'error';
 
 @Component({
   selector: 'app-options-list',
@@ -46,7 +46,6 @@ export class OptionsListComponent implements OnInit {
   loading = signal<boolean>(true);
   dataState = signal<OptionsDataState>('loading');
   loadError = signal<string>('');
-  isMock = signal<boolean>(false);
   showNoSell = signal<boolean>(false);
   expandedRow = signal<string | null>(null);
   sellingTicker = signal<string | null>(null);
@@ -107,9 +106,8 @@ export class OptionsListComponent implements OnInit {
     this.loadError.set('');
 
     this.marketData.fetchAll(this.selectedTicker).subscribe({
-      next: ({ stock, options, isMock, timestamp }) => {
+      next: ({ stock, options, timestamp }) => {
         this.stock.set(stock);
-        this.isMock.set(isMock);
         this.lastUpdated.set(timestamp);
 
         this.allOptions.set([]);
@@ -128,17 +126,17 @@ export class OptionsListComponent implements OnInit {
           this.ivCurrent.set(ivInfo.currentIv);
           this.ivDays.set(ivInfo.days);
 
-          this.dataState.set(isMock ? 'mock' : 'ready');
+          this.dataState.set('ready');
         } else {
           this.dataState.set('empty');
         }
 
         this.loading.set(false);
       },
-      error: () => {
+      error: (error: Error) => {
         this.loading.set(false);
         this.dataState.set('error');
-        this.loadError.set('Falha ao carregar dados de opcoes. Verifique sua conexao ou tente novamente.');
+        this.loadError.set(error?.message || 'Não foi possível obter dados reais. Verifique sua conexão ou tente novamente.');
       },
     });
   }

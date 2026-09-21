@@ -23,7 +23,6 @@ src/app/
 │   ├── sold-options.service.ts   → Gestão de posições vendidas + roll signals
 │   ├── iv-history.service.ts     → Histórico de IV ATM (90 pregões)
 │   ├── liquidity-history.service.ts → Média de liquidez (5 pregões)
-│   └── mock-data.service.ts      → Dados simulados (fora do pregão)
 ├── pages/
 │   ├── stock-selection/          → Tela inicial: ações + vendas ativas
 │   └── options-list/             → Tela de opções: ranking + indicadores
@@ -335,8 +334,6 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | `bbosi-sold-options` | Opções vendidas ativas | Até remoção manual |
 | `bbosi-iv-history` | IV ATM diária por ação | 90 pregões |
 | `bbosi-liquidity-history` | Negócios diários por opção | 5 pregões |
-| `bbosi-options-{TICKER}` | Cache de opções (último fetch) | Até próximo fetch |
-| `bbosi-price-{TICKER}` | Cache de preço da ação | Até próximo fetch |
 
 ---
 
@@ -360,7 +357,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 
 2. **IV Rank precisa de histórico** — Nos primeiros 5 dias de uso, IV Rank/Percentile não aparece. Após 20+ dias, torna-se confiável.
 
-3. **Mercado fechado** — Fora do horário de pregão (10h-17h), a API retorna dados em cache ou mock.
+3. **Mercado fechado** — Fora do horário de pregão (10h-17h), ou quando as fontes não respondem, a aplicação não exibe dados de mercado e oferece nova tentativa.
 
 4. **CORS em produção** — Usa o Worker Cloudflare como intermediário. Se o proxy ficar indisponível, o app perde acesso aos dados.
 

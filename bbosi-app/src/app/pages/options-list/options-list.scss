@@ -204,27 +204,6 @@
   color: #4fd1c5;
 }
 
-// ===== MOCK BANNER =====
-.mock-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 0;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-  font-size: 0.8rem;
-  margin-bottom: 16px;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-}
-
 // ===== LOADING =====
 .loading-container {
   display: flex;

@@ -15,10 +15,10 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 | ID | Prioridade | Item | Status | Impacto | Esforco |
 |----|------------|------|--------|---------|---------|
 | BL-001 | P0 | Controlar concorrência e frequência do polling da home | Concluído | Alto | M |
-| BL-002 | P0 | Corrigir e testar inferência de preço no fallback | Aberto | Alto | M |
-| BL-003 | P0 | Separar estados de erro, vazio e mock na tela de opções | Concluído | Alto | P |
+| BL-002 | P0 | Exibir indisponibilidade quando preço real não puder ser obtido | Concluído | Alto | M |
+| BL-003 | P0 | Separar estados de erro, vazio e indisponibilidade na tela de opções | Concluído | Alto | P |
 | BL-004 | P0 | Acessibilidade de interações principais | Concluído | Alto | M |
-| BL-005 | P1 | Política de cache com TTL e staleness visível | Parcial | Médio | M |
+| BL-005 | P1 | Indicador de indisponibilidade das fontes e nova tentativa | Concluído | Médio | M |
 | BL-006 | P1 | Ajustar históricos para dia local America/Sao_Paulo | Aberto | Médio | P |
 | BL-007 | P1 | Quality gate no CI | Aberto | Alto | P |
 | BL-008 | P1 | Suite de testes de dominio | Parcial | Alto | G |
@@ -28,7 +28,7 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 ## Entregas já incorporadas
 
 - Polling de posições a cada 10 segundos, com pausa quando a aba está oculta e bloqueio de refresh concorrente.
-- Estados explícitos de loading, dados reais, mock, vazio e erro, com retry manual.
+- Estados explícitos de loading, dados reais, vazio e erro, com retry manual e sem dados simulados.
 - Navegação por teclado em cards e linhas expansivas, com `role` e atributos ARIA.
 - Ranking por VDXX, busca por série, destaque da melhor oportunidade e detalhes expansivos.
 - Cadastro de venda, edição do preço executado, recompra e remoção/histórico.
@@ -42,7 +42,7 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 
 ## Próximos passos
 
-1. Cobrir com testes a inferência de preço e os cenários de fallback.
+1. Cobrir com testes os cenários de indisponibilidade das fontes.
 2. Definir TTL, indicador de dado antigo e política de invalidação.
 3. Padronizar timezone dos históricos para o calendário local da B3.
 4. Configurar CI para executar build e testes antes do deploy.

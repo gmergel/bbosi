@@ -42,7 +42,7 @@ O MVP funcional possui duas telas:
 - Oculta opções classificadas como **Não Venda** por padrão, com controle para exibi-las.
 - Expande cada linha para mostrar gregas e indicadores.
 - Destaca a melhor oportunidade com maior VDXX positivo e elegível.
-- Informa estado de carregamento, dados reais, dados simulados, ausência de dados e erro de rede separadamente.
+- Informa estado de carregamento, dados reais, ausência de dados e erro de rede separadamente; nunca substitui dados indisponíveis por simulações.
 - Exibe IV ATM, IV Rank, percentil e regime de volatilidade quando há histórico suficiente.
 - Exibe o alvo diário composto necessário para a ação atingir o strike no número de pregões restante.
 - Permite registrar a venda e informar o preço efetivamente executado.
@@ -93,14 +93,14 @@ O alvo de recompra é 50% do prêmio vendido. O limite de recompra visual é cal
 - Fontes: Yahoo Finance, opcoes.net.br e API VendaCoberta.
 - Posições, histórico de IV e histórico de liquidez são armazenados no `localStorage`.
 - Posições podem ser sincronizadas remotamente em D1 mediante token configurado pelo usuário.
-- Quando o mercado está fechado ou as fontes não respondem, a aplicação pode usar cache ou dados simulados e informa o estado na tela.
+- Quando o mercado está fechado ou as fontes não respondem, a aplicação informa que os dados reais não estão disponíveis e oferece nova tentativa.
 
 ## Requisitos não funcionais
 
 - Layout responsivo para desktop e mobile.
 - Interações principais acessíveis por teclado e com nomes ARIA.
 - Atualização sem sobrepor consultas de posições em andamento.
-- Separação explícita entre loading, pronto, mock, vazio e erro.
+- Separação explícita entre loading, pronto, vazio e erro.
 - Nenhum segredo embutido no frontend; o token de sincronização fica no dispositivo do usuário.
 
 ## Fora do escopo atual
