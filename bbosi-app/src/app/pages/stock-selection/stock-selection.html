@@ -1,13 +1,13 @@
 <div class="home">
   <!-- Opcoes vendidas -->
-  @if (soldOptionsService.activeOptions().length > 0) {
+  @if (sortedActiveOptions().length > 0) {
     <section class="section sold-section">
       <h2 class="section__title">
         <mat-icon>assignment_turned_in</mat-icon>
         Minhas Vendas
       </h2>
       <div class="sold-grid">
-        @for (sold of soldOptionsService.activeOptions(); track sold.optionTicker) {
+        @for (sold of sortedActiveOptions(); track sold.optionTicker) {
           <div class="sold-card glass"
                [class.sold-card--safe]="getCardStatus(sold) === 'safe'"
                [class.sold-card--alvo]="getCardStatus(sold) === 'alvo'"

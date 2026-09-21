@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,9 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   stocks = signal<Stock[]>(this.marketData.getStocks());
   lastUpdated = signal<Date | null>(null);
+  sortedActiveOptions = computed(() => [...this.soldOptionsService.activeOptions()].sort((a, b) =>
+    a.stockTicker.localeCompare(b.stockTicker) || a.optionTicker.localeCompare(b.optionTicker)
+  ));
 
   ngOnInit(): void {
     // Atualiza dados das opções vendidas
