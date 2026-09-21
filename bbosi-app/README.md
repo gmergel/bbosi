@@ -1,8 +1,8 @@
 # GerBOSI App
 
-Aplicacao Angular para analise de calls de venda coberta no GerBOSI.
+Aplicação Angular para análise de calls de venda coberta no GerBOSI.
 
-O frontend possui selecao de acoes, ranking de opcoes por VDXX, filtros de elegibilidade, historico de IV/liquidez e monitoramento de posicoes vendidas. A documentacao funcional esta em `../docs/PRD.md`.
+O frontend possui seleção de ações, ranking de opções por VDXX, filtros de elegibilidade, taxa mensal estimada, alvo diário composto até o strike, histórico de IV/liquidez e monitoramento de posições vendidas. Os cards de vendas exibem o NV com cores e orientação contextual. A documentação funcional está em `../docs/PRD.md`.
 
 ## Development server
 
@@ -59,4 +59,4 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 
 ## Additional Resources
 
-O app local usa `http://localhost:4200/`. As rotas `/api` sao encaminhadas pelo `proxy.conf.json`; em producao, o frontend usa o Worker descrito em `../bbosi-proxy/README.md`.
+O app local usa `http://localhost:4200/`. As rotas `/api` são encaminhadas pelo `proxy.conf.json`; em produção, o frontend usa o Worker descrito em `../bbosi-proxy/README.md`.

@@ -80,6 +80,9 @@ export class IndicatorService {
     const taxaAnual = option.tradingDays > 0
       ? (ve / stockPrice) * (252 / option.tradingDays) * 100
       : 0;
+    const taxaMensal = option.tradingDays > 0
+      ? (ve / stockPrice) * (21 / option.tradingDays) * 100
+      : 0;
 
     // VDXX: indicador composto (com delta score)
     const vdx = option.price > 0 ? (nv / option.price) * 100 : 0;
@@ -113,6 +116,7 @@ export class IndicatorService {
       vdxx: Math.round(vdxx * 100) / 100,
       bosi: Math.round(bosi * 100) / 100,
       taxaAnual: Math.round(taxaAnual * 100) / 100,
+      taxaMensal: Math.round(taxaMensal * 100) / 100,
       premiumPercent: Math.round(premiumPercent * 100) / 100,
       noSell,
       noSellReason,

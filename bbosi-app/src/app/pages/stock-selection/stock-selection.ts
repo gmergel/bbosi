@@ -171,6 +171,12 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return this.soldOptionsService.getNvColor(nv);
   }
 
+  getNvActionTooltip(nv: number): string {
+    if (nv < 0) return `NV ${nv.toFixed(2)} — considerar recompra`;
+    if (nv < 0.2) return `NV ${nv.toFixed(2)} — acompanhar de perto`;
+    return `NV ${nv.toFixed(2)} — manter posição`;
+  }
+
   getCardStatus(sold: SoldOption): 'safe' | 'alvo' | 'recomprar' | 'rolar' {
     const roll = this.getRollSignal(sold);
     if (roll.shouldRoll && roll.severity === 'danger') return 'recomprar';

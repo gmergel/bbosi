@@ -40,7 +40,7 @@ src/app/
 | Cotação da ação | Yahoo Finance | `/v8/finance/chart/{TICKER}.SA` |
 | Opções + Gregas | opcoes.net.br | `/api/v1?r0t=OptionsChain&r0p.underlying_asset_id={TICKER}` |
 
-Em produção (GitHub Pages), ambas passam por `corsproxy.io` para contornar CORS.
+Em produção (GitHub Pages), ambas passam pelo Worker Cloudflare próprio para contornar CORS.
 
 ---
 
@@ -59,6 +59,8 @@ NV = VE - (Delta + Gama)
 
 **Implementação:** `indicator.service.ts` → `calcIndicators()`
 
+No monitoramento de posições vendidas, o NV negativo gera um sinal de perigo e sugere considerar a recompra. O card exibe o valor em um quadrinho colorido; ao passar o mouse, a dica orienta manter a posição, acompanhar de perto ou considerar a recompra.
+
 ---
 
 ### 2. VDX (Índice de Eficiência da Venda)
@@ -73,7 +75,21 @@ Quanto maior, melhor a relação risco/retorno.
 
 ---
 
-### 3. VDXX (VDX Estendido + Delta Score)
+### 3. Alvo diário até o strike
+
+O alvo diário indica quanto a ação precisaria variar, em média, por pregão para alcançar o strike no prazo restante. O cálculo usa crescimento composto:
+
+```
+Alvo diário = (Strike / Preço_ação)^(1 / pregões) - 1
+```
+
+Uma taxa exibida como `+0,35%/dia`, por exemplo, significa multiplicar o preço por `1,0035` a cada pregão. Após o número de pregões indicado, o resultado se aproxima do strike.
+
+Esse valor é uma referência matemática, não uma previsão de mercado nem uma meta garantida. O cálculo não considera dividendos, gaps, volatilidade, feriados ou a trajetória real do preço.
+
+---
+
+### 4. VDXX (VDX Estendido + Delta Score)
 
 Versão aprimorada que incorpora lastro, tempo e **proximidade ao delta ideal**:
 
@@ -102,7 +118,7 @@ VDXX = Lastro% × (NV / Cotação) × 50 × FatorTempo × DeltaScore
 
 ---
 
-### 4. BOSI (Germano Options Strength Index)
+### 5. BOSI (Germano Options Strength Index)
 
 Indica onde está a **força do mercado de opções**:
 
@@ -115,7 +131,7 @@ BOSI = VE × %NumNeg
 
 ---
 
-### 5. GerBOSI (Germano BOSI consolidado)
+### 6. GerBOSI (Germano BOSI consolidado)
 
 **Média ponderada dos strikes**, usando BOSI como peso:
 
@@ -145,6 +161,12 @@ O app aplica **10 regras** sequenciais para determinar se uma opção pode ser v
 | 10 | IV não extrema | IV ≤ 150% | IV absurda indica evento extremo |
 
 **Liquidez (média 5 pregões):** O filtro usa a média de negócios dos últimos 5 dias (armazenados no localStorage) para evitar falsos positivos de dias atípicos. O BOSI continua usando os trades do dia.
+
+O filtro usa a taxa anualizada mínima de 6% a.a. Para facilitar a leitura da operação atual, a interface exibe a taxa mensal estimada com base em 21 pregões por mês:
+
+```
+Taxa mensal = (VE / Preço_ação) × (21 / pregões) × 100
+```
 
 ---
 
@@ -210,7 +232,7 @@ Monitora em tempo real quanto do prêmio vendido já foi "ganho":
 | 50-75% | Verde | Alvo atingido — considerar fechar |
 | 75-100% | Teal | Excelente — fechar ou deixar expirar |
 
-Além do percentual capturado, a barra marca o alvo de 50%, o ponto de equilibrio e o limite de recompra. O limite e calculado em 125% do preco de venda. Na legenda inferior da interface, ele aparece apenas como valor monetario, sem rotulo textual, pois a posicao identifica seu significado.
+Além do percentual capturado, a barra marca o alvo de 50%, o ponto de equilíbrio e o limite de recompra. O limite é calculado em 125% do preço de venda. Na legenda inferior da interface, ele aparece apenas como valor monetário, sem rótulo textual, pois a posição identifica seu significado. O NV fica fora dessa barra por não representar valor monetário.
 
 **Por que alvo em 50%?**
 
@@ -246,7 +268,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 **Cards de vendas ativas:**
 - Logo + ticker da opção
 - Meta: ação · dias restantes · preço atual · timestamp
-- NV badge (colorido por status)
+- Quadrinho de NV no cabeçalho (colorido por status e com dica de ação)
 - Alert banner (roll signal com severidade)
 - Barra visual GerBOSI/Preço/Strike com marcadores
 - Barra de progresso de lucro (com alvo 50%)
@@ -267,6 +289,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 
 **Ranking de opções:**
 - Ordenadas por VDXX decrescente
+- Taxa mensal estimada exibida por opção
 - Badge com rank visual (cores por faixa de VDXX)
 - Destaque da "Melhor Oportunidade" (card especial)
 - Toggle para mostrar/ocultar "Não Venda"
@@ -286,7 +309,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 │    • Escolher opção com maior VDXX (passa nos filtros)  │
 │    • Clicar VENDA → registra posição                    │
 ├─────────────────────────────────────────────────────────┤
-│ 2. MONITORAMENTO (auto-refresh 2s)                      │
+│ 2. MONITORAMENTO (auto-refresh 10s)                     │
 │    • Preço da opção atualiza live                       │
 │    • Barra de lucro % avança                            │
 │    • NV recalcula continuamente                         │
@@ -339,7 +362,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 
 3. **Mercado fechado** — Fora do horário de pregão (10h-17h), a API retorna dados em cache ou mock.
 
-4. **CORS em produção** — Usa corsproxy.io como intermediário. Se o proxy ficar indisponível, o app perde acesso aos dados.
+4. **CORS em produção** — Usa o Worker Cloudflare como intermediário. Se o proxy ficar indisponível, o app perde acesso aos dados.
 
 5. **Delta Score é opinativo** — O centro em 0.20 e spread de 0.12 são baseados em literatura mas podem não ser ótimos para todos os ativos/regimes.
 

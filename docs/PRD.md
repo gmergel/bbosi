@@ -1,95 +1,112 @@
 # PRD - GerBOSI App
 
-## Visao geral
+## Visão geral
 
-O GerBOSI e uma aplicacao Angular para analise de venda coberta de calls da B3. A aplicacao combina dados de mercado, indicadores quantitativos e acompanhamento de posicoes vendidas para apoiar a selecao, o registro e a saida de operacoes.
+O GerBOSI é uma aplicação Angular para análise de venda coberta de calls da B3. A aplicação combina dados de mercado, indicadores quantitativos e acompanhamento de posições vendidas para apoiar a seleção, o registro e a saída de operações.
 
 ## Estado atual do produto
 
 O MVP funcional possui duas telas:
 
-1. **Selecao de acoes**: lista ativos monitorados, cotacao, horario da ultima atualizacao e posicoes vendidas.
-2. **Lista de opcoes**: apresenta calls elegiveis, ranking por VDXX, indicadores detalhados e acao para registrar uma venda.
+1. **Seleção de ações**: lista ativos monitorados, cotação, horário da última atualização e posições vendidas.
+2. **Lista de opções**: apresenta calls elegíveis, ranking por VDXX, indicadores detalhados e ação para registrar uma venda.
 
-### Acoes monitoradas
+### Ações monitoradas
 
 | Ticker | Empresa |
 |--------|---------|
 | BBAS3 | Banco do Brasil |
 | BBDC4 | Bradesco |
 | BBSE3 | BB Seguridade |
-| ITUB4 | Itau Unibanco |
+| ITUB4 | Itaú Unibanco |
 | KLBN4 | Klabin |
 | PETR4 | Petrobras |
 | VALE3 | Vale |
 
-## Tela de selecao
+## Tela de seleção
 
-- Exibe cotacao e horario de mercado de cada acao.
-- Permite abrir a lista de opcoes por clique, Enter ou Espaco.
-- Exibe vendas ativas com ticker, dias, preco, NV, GerBOSI, preco da acao e strike.
-- Atualiza posicoes automaticamente a cada 10 segundos quando a aba esta visivel.
-- Permite editar o preco de venda, registrar recompra, remover uma venda e remover registros do historico.
-- A barra de lucro mostra lucro capturado, alvo de 50%, ponto de equilibrio e o limite de recompra. Na legenda inferior, o limite aparece apenas como valor monetario, sem texto, pois sua posicao identifica a indicacao.
-- Permite configurar um token de sincronizacao para persistir posicoes no proxy/Cloudflare D1.
+- Exibe cotação e horário de mercado de cada ação.
+- Permite abrir a lista de opções por clique, Enter ou Espaço.
+- Exibe vendas ativas com ticker, dias, preço, NV, GerBOSI, preço da ação e strike.
+- Ordena os cards de opções vendidas alfabeticamente pelo ticker da ação.
+- Atualiza posições automaticamente a cada 10 segundos quando a aba está visível.
+- Permite editar o preço de venda, registrar recompra, remover uma venda e remover registros do histórico.
+- Exibe o NV em um quadrinho no canto superior direito do card, ao lado dos botões de recompra e fechamento. As cores indicam o estado do indicador, e o tooltip sugere manter, acompanhar ou considerar recompra.
+- A barra de lucro mostra lucro capturado, alvo de 50%, ponto de equilíbrio e o limite de recompra. O NV não é misturado à barra porque não representa valor monetário.
+- Permite configurar um token de sincronização para persistir posições no proxy/Cloudflare D1.
 
-## Tela de opcoes
+## Tela de opções
 
-- Busca dados de calls da acao selecionada.
-- Ordena por VDXX decrescente e permite filtrar por serie.
-- Oculta opcoes classificadas como **Nao Venda** por padrao, com controle para exibi-las.
+- Busca dados de calls da ação selecionada.
+- Ordena por VDXX decrescente e permite filtrar por série.
+- Oculta opções classificadas como **Não Venda** por padrão, com controle para exibi-las.
 - Expande cada linha para mostrar gregas e indicadores.
-- Destaca a melhor oportunidade com maior VDXX positivo e elegivel.
-- Informa estado de carregamento, dados reais, dados simulados, ausencia de dados e erro de rede separadamente.
-- Exibe IV ATM, IV Rank, percentil e regime de volatilidade quando ha historico suficiente.
-- Permite registrar a venda e informar o preco efetivamente executado.
+- Destaca a melhor oportunidade com maior VDXX positivo e elegível.
+- Informa estado de carregamento, dados reais, dados simulados, ausência de dados e erro de rede separadamente.
+- Exibe IV ATM, IV Rank, percentil e regime de volatilidade quando há histórico suficiente.
+- Exibe o alvo diário composto necessário para a ação atingir o strike no número de pregões restante.
+- Permite registrar a venda e informar o preço efetivamente executado.
 
 ## Indicadores e regras
 
-Os indicadores sao calculados no frontend a partir dos dados brutos recebidos:
+Os indicadores são calculados no frontend a partir dos dados brutos recebidos:
 
 ```
-VE = preco da opcao, se OTM/ATM
-VE = preco da opcao - valor intrinseco, se ITM
+VE = preço da opção, se OTM/ATM
+VE = preço da opção - valor intrínseco, se ITM
 NV = VE - (Delta + Gama)
-VDX = (NV / preco da opcao) * 100
-VDXX = Lastro% * (NV / preco) * 50 * FatorTempo * DeltaScore
-BOSI = VE * percentual de negocios da opcao
+VDX = (NV / preço da opção) * 100
+VDXX = Lastro% * (NV / preço) * 50 * FatorTempo * DeltaScore
+BOSI = VE * percentual de negócios da opção
 GerBOSI = soma(Strike * BOSI) / soma(BOSI)
-Taxa anualizada = (VE / preco da acao) * (252 / dias uteis) * 100
+Taxa anualizada = (VE / preço da ação) * (252 / dias úteis) * 100
 ```
 
-Uma opcao e marcada como **Nao Venda** quando falha em uma regra de elegibilidade: preco minimo, liquidez media, lastro, prazo, VE, NV, faixa de delta, taxa anualizada ou IV maxima.
+Embora a elegibilidade use a taxa anualizada mínima de 6% a.a., a interface exibe a taxa mensal estimada, calculada com 21 pregões por mês:
 
-O filtro usa media de negocios dos ultimos cinco pregoes; o BOSI usa os negocios do dia. O DeltaScore favorece delta proximo de 0,20.
+```
+Taxa mensal = (VE / preço da ação) * (21 / dias úteis) * 100
+```
 
-## Monitoramento e saida
+O alvo diário é uma taxa média composta, não uma variação simples:
 
-O servico de posicoes atualiza preco da acao, preco da opcao, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saida consideram alvo de 50% do premio capturado, proximidade do vencimento, risco de gamma, pressao do GerBOSI e NV negativo.
+```
+Alvo diário = ((Strike / preço da ação) ^ (1 / pregões)) - 1
+```
 
-O alvo de recompra e 50% do premio vendido. O limite de recompra visual e calculado como 125% do preco de venda. O texto da interface usa apenas o valor desse limite; a regra e mantida no servico de posicoes.
+Aplicando essa taxa a cada pregão, o preço final seria aproximadamente o strike. O cálculo é uma referência matemática e não uma previsão de alta diária; não considera dividendos, gaps, volatilidade ou a trajetória real do preço.
+
+Uma opção é marcada como **Não Venda** quando falha em uma regra de elegibilidade: preço mínimo, liquidez média, lastro, prazo, VE, NV, faixa de delta, taxa anualizada ou IV máxima.
+
+O filtro usa média de negócios dos últimos cinco pregões; o BOSI usa os negócios do dia. O DeltaScore favorece delta próximo de 0,20.
+
+## Monitoramento e saída
+
+O serviço de posições atualiza preço da ação, preço da opção, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saída consideram alvo de 50% do prêmio capturado, proximidade do vencimento, risco de gamma, pressão do GerBOSI e NV negativo.
+
+O alvo de recompra é 50% do prêmio vendido. O limite de recompra visual é calculado como 125% do preço de venda. O texto da interface usa apenas o valor desse limite; a regra é mantida no serviço de posições. Quando o NV fica negativo, o sistema apresenta um sinal de perigo e sugere considerar a recompra.
 
 ## Dados e persistencia
 
 - Desenvolvimento: Angular servido localmente com `npm run start`, usando rotas do proxy em `/api`.
-- Producao: frontend estatico no GitHub Pages e Cloudflare Worker como proxy proprio.
+- Produção: frontend estático no GitHub Pages e Cloudflare Worker como proxy próprio.
 - Fontes: Yahoo Finance, opcoes.net.br e API VendaCoberta.
-- Posicoes, historico de IV e historico de liquidez sao armazenados no `localStorage`.
-- Posicoes podem ser sincronizadas remotamente em D1 mediante token configurado pelo usuario.
-- Quando o mercado esta fechado ou as fontes nao respondem, a aplicacao pode usar cache ou dados simulados e informa o estado na tela.
+- Posições, histórico de IV e histórico de liquidez são armazenados no `localStorage`.
+- Posições podem ser sincronizadas remotamente em D1 mediante token configurado pelo usuário.
+- Quando o mercado está fechado ou as fontes não respondem, a aplicação pode usar cache ou dados simulados e informa o estado na tela.
 
-## Requisitos nao funcionais
+## Requisitos não funcionais
 
 - Layout responsivo para desktop e mobile.
-- Interacoes principais acessiveis por teclado e com nomes ARIA.
-- Atualizacao sem sobrepor consultas de posicoes em andamento.
-- Separacao explicita entre loading, pronto, mock, vazio e erro.
-- Nenhum segredo embutido no frontend; o token de sincronizacao fica no dispositivo do usuario.
+- Interações principais acessíveis por teclado e com nomes ARIA.
+- Atualização sem sobrepor consultas de posições em andamento.
+- Separação explícita entre loading, pronto, mock, vazio e erro.
+- Nenhum segredo embutido no frontend; o token de sincronização fica no dispositivo do usuário.
 
 ## Fora do escopo atual
 
-- Opcoes PUT.
+- Opções PUT.
 - Simulacao completa de carteira.
-- Alertas push ou notificacoes externas.
-- Autenticacao de usuarios.
-- Historico analitico avancado e backtesting.
+- Alertas push ou notificações externas.
+- Autenticação de usuários.
+- Histórico analítico avançado e backtesting.

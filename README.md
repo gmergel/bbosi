@@ -1,14 +1,16 @@
 # GerBOSI
 
-Aplicacao para analise de venda coberta de calls da B3, com indicadores GerBOSI, ranking de opcoes e monitoramento de posicoes vendidas.
+Aplicação para análise de venda coberta de calls da B3, com indicadores GerBOSI, ranking de opções e monitoramento de posições vendidas.
 
-## Documentacao
+O app também exibe a taxa mensal estimada da venda, o alvo diário composto necessário para a ação alcançar o strike no prazo restante e o NV com orientação de acompanhamento ou recompra.
+
+## Documentação
 
 - [PRD e estado atual do produto](docs/PRD.md)
 - [Indicadores e regras quantitativas](docs/indicadores-bbosi.md)
-- [Backlog tecnico](docs/backlog-tecnico.md)
+- [Backlog técnico](docs/backlog-tecnico.md)
 - [Frontend Angular](bbosi-app/README.md)
-- [Proxy de producao](bbosi-proxy/README.md)
+- [Proxy de produção](bbosi-proxy/README.md)
 
 ## Desenvolvimento local
 

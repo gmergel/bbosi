@@ -110,7 +110,7 @@
             <span>Strike <strong>R$ {{ best.strike.toFixed(2) }}</strong></span>
             <span>VE <strong>R$ {{ best.ve.toFixed(2) }}</strong></span>
             <span>Lastro <strong>{{ best.lastroPercent.toFixed(1) }}%</strong></span>
-            <span>Taxa <strong>{{ best.taxaAnual.toFixed(1) }}% a.a.</strong></span>
+            <span>Taxa <strong>{{ best.taxaMensal.toFixed(1) }}% a.m.</strong></span>
             <span>VDXX <strong>{{ best.vdxx.toFixed(1) }}</strong></span>
           </div>
         </div>
@@ -171,8 +171,8 @@
                 <span class="metric-sm-value">{{ option.lastroPercent.toFixed(1) }}%</span>
               </div>
               <div class="option-row__metric">
-                <span class="metric-sm-label">Taxa a.a.</span>
-                <span class="metric-sm-value">{{ option.taxaAnual.toFixed(1) }}%</span>
+                <span class="metric-sm-label">Taxa a.m.</span>
+                <span class="metric-sm-value">{{ option.taxaMensal.toFixed(1) }}%</span>
               </div>
             </div>
 
@@ -204,8 +204,8 @@
                   <span class="detail-value" [class.text-success]="option.lastroPercent >= 0" [class.text-danger]="option.lastroPercent < -2">{{ option.lastroPercent.toFixed(1) }}%</span>
                 </div>
                 <div class="detail-item">
-                  <span class="detail-label">Taxa a.a.</span>
-                  <span class="detail-value" [class.text-success]="option.taxaAnual >= 12" [class.text-danger]="option.taxaAnual < 6">{{ option.taxaAnual.toFixed(1) }}%</span>
+                  <span class="detail-label">Taxa a.m.</span>
+                  <span class="detail-value" [class.text-success]="option.taxaMensal >= 1" [class.text-danger]="option.taxaMensal < 0.5">{{ option.taxaMensal.toFixed(1) }}%</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">VDXX</span>

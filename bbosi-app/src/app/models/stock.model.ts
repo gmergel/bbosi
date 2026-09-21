@@ -27,7 +27,8 @@ export interface OptionIndicators extends OptionData {
   vdx: number;
   vdxx: number;
   bosi: number;
-  taxaAnual: number;       // Retorno anualizado da venda coberta (% a.a.)
+  taxaAnual: number;       // Retorno anualizado usado na elegibilidade (% a.a.)
+  taxaMensal: number;      // Retorno mensal estimado da venda coberta (% a.m.)
   premiumPercent: number;  // Prêmio como % do preço da ação
   noSell: boolean;
   noSellReason: string;    // Motivo pelo qual não deve vender

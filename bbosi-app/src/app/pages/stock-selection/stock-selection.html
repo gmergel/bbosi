@@ -26,6 +26,11 @@
                 <span class="sold-card__ticker">{{ sold.optionTicker }}</span>
                 <span class="sold-card__meta">{{ sold.stockTicker }} · {{ sold.tradingDays }}d · R${{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}@if (sold.lastRefresh) { · <mat-icon class="sold-card__date-icon">schedule</mat-icon>{{ sold.lastRefresh | relativeTime }}}</span>
               </div>
+              <div class="sold-card__nv" [class.text-green]="sold.nv > 0" [class.text-red]="sold.nv <= 0"
+                    [matTooltip]="getNvActionTooltip(sold.nv)">
+                <span class="sold-card__nv-label">NV</span>
+                <span class="sold-card__nv-value">{{ sold.nv.toFixed(2) }}</span>
+              </div>
               @if (buybackTicker() !== sold.optionTicker) {
                 <button mat-icon-button
                         type="button"
@@ -121,10 +126,6 @@
                     R$ {{ (sold.optionPrice || sold.sellPrice).toFixed(2) }}
                    </span>
                 <div class="profit-bar__marker" style="left: 75%" matTooltip="Alvo 50%"></div>
-                <div class="profit-bar__marker profit-bar__marker--nv"
-                     [style.left.%]="getNvPosition(sold)"
-                     [style.background]="getNvColor(sold.nv)"
-                     matTooltip="NV {{ sold.nv.toFixed(2) }}"></div>
               </div>
               @if (editingSellTicker() === sold.optionTicker) {
                 <div class="sell-price-editor" (click)="$event.stopPropagation()">
@@ -162,10 +163,6 @@
                   </button>
                   <span class="profit-meta__stop">{{ getStop(sold).toFixed(2) }}</span>
                   <span class="profit-meta__target">Alvo {{ getTarget(sold).toFixed(2) }}</span>
-                  <span class="profit-meta__nv"
-                        [style.left.%]="getNvPosition(sold)"
-                        [style.color]="getNvColor(sold.nv)"
-                        matTooltip="NV (Não Venda)">NV {{ sold.nv.toFixed(2) }}</span>
                 </div>
               }
               @if (buybackTicker() === sold.optionTicker) {
