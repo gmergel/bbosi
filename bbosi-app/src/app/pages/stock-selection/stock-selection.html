@@ -88,6 +88,12 @@
                        style="left: 100%"
                        matTooltip="Strike R${{ sold.strike.toFixed(2) }}">
                   </div>
+                  <span class="bar-scale__distance"
+                    [style.left.%]="getStrikeDistanceLabelPosition(sold)"
+                        [class.bar-scale__distance--below]="getCurrentStrikeDistance(sold) < 0"
+                        [matTooltip]="'Distância da cotação atual até o strike'">
+                    {{ getCurrentStrikeDistance(sold).toFixed(2) }}% {{ getCurrentStrikeDistance(sold) >= 0 ? '→' : '←' }}
+                  </span>
                 </div>
                 <div class="bar-scale__labels bar-scale__labels--three">
                   @for (item of getBarLabels(sold); track item.type) {

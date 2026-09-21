@@ -220,6 +220,17 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return ((sold.strike - sold.bbosi) / sold.strike) * 100;
   }
 
+  getCurrentStrikeDistance(sold: SoldOption): number {
+    if (sold.stockPrice <= 0 || sold.strike <= 0) return 0;
+    return ((sold.strike - sold.stockPrice) / sold.stockPrice) * 100;
+  }
+
+  getStrikeDistanceLabelPosition(sold: SoldOption): number {
+    const pricePosition = this.getMarkerPosition(sold.stockPrice, sold);
+    const strikePosition = this.getMarkerPosition(sold.strike, sold);
+    return (pricePosition + strikePosition) / 2;
+  }
+
   getMarkerPosition(value: number, sold: SoldOption): number {
     const price = sold.stockPrice;
     if (price <= 0) return 50;
