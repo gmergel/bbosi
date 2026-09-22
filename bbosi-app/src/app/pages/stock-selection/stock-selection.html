@@ -90,9 +90,9 @@
                   </div>
                   <span class="bar-scale__distance"
                     [style.left.%]="getStrikeDistanceLabelPosition(sold)"
-                        [class.bar-scale__distance--below]="getCurrentStrikeDistance(sold) < 0"
-                        [matTooltip]="'Distância da cotação atual até o strike'">
-                    {{ getCurrentStrikeDistance(sold).toFixed(2) }}% {{ getCurrentStrikeDistance(sold) >= 0 ? '→' : '←' }}
+                    [class.bar-scale__distance--below]="getCurrentStrikeDistance(sold) < 0"
+                    [matTooltip]="'Distância total até o strike: ' + getCurrentStrikeDistance(sold).toFixed(2) + '%. Ritmo composto necessário: ' + getDailyStrikeMove(sold).toFixed(2) + '% ao dia'">
+                    {{ getCurrentStrikeDistance(sold).toFixed(2) }}% {{ getCurrentStrikeDistance(sold) >= 0 ? '→' : '←' }} · {{ getDailyStrikeMove(sold).toFixed(2) }}%/dia
                   </span>
                 </div>
                 <div class="bar-scale__labels bar-scale__labels--three">
