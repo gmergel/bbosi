@@ -265,8 +265,12 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     return sold.sellPrice * 0.50;
   }
 
+  getStopPercent(sold: SoldOption): number {
+    return this.soldOptionsService.getStopPercent(sold);
+  }
+
   getStop(sold: SoldOption): number {
-    return sold.sellPrice * 1.25;
+    return sold.sellPrice * (1 + this.getStopPercent(sold) / 100);
   }
 
   getProfitCaptured(sold: SoldOption): number {

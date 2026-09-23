@@ -231,7 +231,19 @@ Monitora em tempo real quanto do prêmio vendido já foi "ganho":
 | 50-75% | Verde | Alvo atingido — considerar fechar |
 | 75-100% | Teal | Excelente — fechar ou deixar expirar |
 
-Além do percentual capturado, a barra marca o alvo de 50%, o ponto de equilíbrio e o limite de recompra. O limite é calculado em 125% do preço de venda. Na legenda inferior da interface, ele aparece apenas como valor monetário, sem rótulo textual, pois a posição identifica seu significado. O NV fica fora dessa barra por não representar valor monetário.
+Além do percentual capturado, a barra marca o alvo de 50%, o ponto de equilíbrio e o stop dinâmico de recompra. O stop não é mais um valor fixo: ele varia conforme risco da opção, com faixa conservadora entre 15% e 40% sobre o preço de venda. Em regra prática, o cálculo usa uma base de 25% e ajusta para cima ou para baixo conforme gamma, DTE e NV, com limites para evitar extremos. Na legenda inferior da interface, ele aparece apenas como valor monetário, sem rótulo textual, pois a posição identifica seu significado. O NV fica fora dessa barra por não representar valor monetário.
+
+**Fórmula do stop dinâmico (heurística operacional):**
+
+```text
+stop = 25 - gammaAdj - dteAdj - nvAdj + timeAdj + profitAdj
+```
+
+- `gammaAdj`: maior quando a opção é muito sensível a pequenos movimentos do ativo
+- `dteAdj`: maior em vencimentos curtos (gamma risk)
+- `nvAdj`: maior quando o NV piora ou fica negativo
+- `timeAdj`: permite um pouco mais de folga em prazos mais longos
+- `profitAdj`: ajusta a tolerância conforme o lucro já capturado
 
 **Por que alvo em 50%?**
 
@@ -255,6 +267,8 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | 3 | Gamma Risk | DTE ≤ 5 E % Capturado < 50% | 🔴 Danger | Fechar imediatamente |
 | 4 | Pressão do GerBOSI | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
 | 5 | NV negativo | NV < 0 | 🔴 Danger | Recomprar |
+
+**Stop dinâmico operacional:** o nível de recompra não é um número fixo de 125%, mas sim um stop ajustado por risco. A regra deriva de uma base de 25% e aplica penalidades para gamma alta, DTE curto e NV ruim; prazos mais longos e lucros já consolidados abrem ligeiramente a tolerância. Isso reduz o risco de manter uma opção muito sensível sem proteção suficiente.
 
 **Gamma Risk explicado:** Nas últimas 5 sessões antes do vencimento, o gamma é máximo. Se a opção ainda tem prêmio significativo (< 50% capturado), qualquer movimento do ativo contra a posição pode transformar lucro em prejuízo rapidamente. É a zona mais perigosa para o vendedor.
 

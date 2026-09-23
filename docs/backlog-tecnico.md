@@ -36,8 +36,8 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 - Quadrinho de NV no cabeçalho do card, com cores indicativas e tooltip de ação: recompra, acompanhamento ou manutenção.
 - Taxa mensal estimada exibida na lista de opções; a taxa anualizada permanece como critério interno de elegibilidade.
 - Alvo diário composto exibido na lista de opções para indicar a taxa média necessária até o strike.
-- Barra de lucro com alvo de 50%, ponto de equilíbrio e limite de recompra calculado em 125% do preço de venda.
-- O limite de recompra é exibido na legenda apenas como valor monetário; a posição visual identifica a indicação.
+- Barra de lucro com alvo de 50%, ponto de equilíbrio e stop dinâmico de recompra, ajustado por gamma, DTE, NV e lucro capturado.
+- O stop dinâmico é exibido na legenda como valor monetário e percentual atual; a posição visual identifica a indicação.
 - Histórico de IV e liquidez no `localStorage`, além de sincronização opcional de posições pelo Worker/D1.
 
 ## Próximos passos

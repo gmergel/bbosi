@@ -5,6 +5,7 @@ import { IndicatorService } from './indicator.service';
 import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { calculateDynamicStopPercent } from '../utils/dynamic-stop';
 
 export interface SoldOption {
   id: string;
@@ -22,6 +23,9 @@ export interface SoldOption {
   bbosi: number;
   stockPrice: number;
   optionPrice: number;
+  delta?: number;
+  gamma?: number;
+  theta?: number;
   lastRefresh?: string;
   buybackPrice?: number;
   buybackDate?: string;
@@ -73,6 +77,9 @@ export class SoldOptionsService {
       bbosi,
       stockPrice,
       optionPrice: option.price,
+      delta: option.delta,
+      gamma: option.gama,
+      theta: option.theta,
       lastRefresh: new Date().toISOString(),
     };
 
@@ -251,14 +258,39 @@ export class SoldOptionsService {
   }
 
   /**
+   * Stop dinâmico com fórmula explícita:
+   *  - base: 25%
+   *  - gamma alta aperta o stop
+   *  - DTE curto aperta o stop
+   *  - NV negativo penaliza mais
+   *  - prazo mais longo permite um pouco mais de folga
+   *
+   * Fórmula resumida:
+   * stop = 25 - gammaAdj - dteAdj - nvAdj + timeAdj
+   * onde gammaAdj, dteAdj, nvAdj e timeAdj são ajustes de risco em pontos percentuais.
+   */
+  getStopPercent(sold: SoldOption): number {
+    const realized = this.getProfitCaptured(sold);
+    return calculateDynamicStopPercent(
+      sold.sellPrice,
+      sold.tradingDays ?? 0,
+      sold.gamma ?? 0,
+      sold.nv ?? 0,
+      realized
+    );
+  }
+
+  /**
    * Determina se a posição deve ser rolada/fechada com base em regras quantitativas.
    */
   getRollSignal(sold: SoldOption): RollSignal {
     const pctCaptured = this.getProfitCaptured(sold);
     const currentPrice = sold.optionPrice ?? sold.sellPrice;
+    const stopPct = this.getStopPercent(sold);
+    const stopPrice = sold.sellPrice * (1 + stopPct / 100);
 
-    if (sold.sellPrice > 0 && currentPrice >= sold.sellPrice * 1.25) {
-      return { shouldRoll: true, reason: 'Stop atingido — recomprar agora', severity: 'danger' };
+    if (sold.sellPrice > 0 && currentPrice >= stopPrice) {
+      return { shouldRoll: true, reason: `Stop dinâmico atingido (${stopPct.toFixed(0)}%) — recomprar agora`, severity: 'danger' };
     }
 
     // Regra 0: Opção em pó — recomprar e rolar para próxima série
