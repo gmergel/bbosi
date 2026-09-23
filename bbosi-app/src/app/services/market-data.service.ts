@@ -155,7 +155,7 @@ export class MarketDataService {
   /**
    * Busca opções (calls) de uma ação.
    * Fonte principal: vendacoberta POST /api/v1/options.
-  * Fallback: opcoes.net.br OptionsChain.
+   * Fallback: opcoes.net.br OptionsChain.
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
     return this.fetchOptionsVendaCoberta(ticker).pipe(
