@@ -37,7 +37,7 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 - Taxa mensal estimada exibida na lista de opções; a taxa anualizada permanece como critério interno de elegibilidade.
 - Alvo diário composto exibido na lista de opções para indicar a taxa média necessária até o strike.
 - Barra de lucro com alvo de 50%, ponto de equilíbrio e stop dinâmico de recompra, ajustado por gamma, DTE, NV e lucro capturado.
-- O stop dinâmico é exibido na legenda como valor monetário e percentual atual; a posição visual identifica a indicação.
+- O stop dinâmico é exibido na legenda como valor monetário e percentual atual; o ajuste foi calibrado para ser moderado em posições normais e mais apertado apenas em cenários de risco extremo.
 - Histórico de IV e liquidez no `localStorage`, além de sincronização opcional de posições pelo Worker/D1.
 
 ## Próximos passos
