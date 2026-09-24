@@ -150,6 +150,28 @@
   }
 }
 
+.refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #4fd1c5;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+
+  mat-icon {
+    animation: refresh-spin 1s linear infinite;
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
+  }
+}
+
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 // ===== STOCKS GRID =====
 .stocks-grid {
   display: flex;

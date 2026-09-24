@@ -5,6 +5,12 @@
       <h2 class="section__title">
         <mat-icon>assignment_turned_in</mat-icon>
         Minhas Vendas
+        @if (refreshingSoldData()) {
+          <span class="refresh-indicator" role="status">
+            <mat-icon>sync</mat-icon>
+            consultando dados...
+          </span>
+        }
       </h2>
       <div class="sold-grid">
         @for (sold of sortedActiveOptions(); track sold.optionTicker) {

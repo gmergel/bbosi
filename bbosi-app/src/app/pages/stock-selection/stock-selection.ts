@@ -8,7 +8,7 @@ import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
 import { RelativeTimePipe } from '../../pipes/relative-time.pipe';
-import { switchMap } from 'rxjs';
+import { finalize, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-stock-selection',
@@ -34,6 +34,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   stocks = signal<Stock[]>(this.marketData.getStocks());
   lastUpdated = signal<Date | null>(null);
+  refreshingSoldData = signal<boolean>(false);
   sortedActiveOptions = computed(() => [...this.soldOptionsService.activeOptions()].sort((a, b) =>
     a.stockTicker.localeCompare(b.stockTicker) || a.optionTicker.localeCompare(b.optionTicker)
   ));
@@ -74,8 +75,10 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (hidden) {
       return;
     }
+    this.refreshingSoldData.set(true);
     this.soldOptionsService.refreshRemote().pipe(
       switchMap(() => this.soldOptionsService.refreshAll()),
+      finalize(() => this.refreshingSoldData.set(false)),
     ).subscribe();
   }
 
