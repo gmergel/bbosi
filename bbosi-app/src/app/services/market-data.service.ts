@@ -154,17 +154,37 @@ export class MarketDataService {
 
   /**
    * Busca opções (calls) de uma ação.
-   * Fonte principal: vendacoberta POST /api/v1/options.
-   * Fallback: opcoes.net.br OptionsChain.
+   * Consulta as duas fontes e usa a que tiver a referência mais recente.
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
-    return this.fetchOptionsVendaCoberta(ticker).pipe(
-      switchMap(options => {
-        if (options.length > 0) return of(options);
-        // Fallback: opcoes.net.br
-        return this.fetchOptionsOpcoes(ticker);
-      })
+    return forkJoin({
+      opcoes: this.fetchOptionsOpcoes(ticker),
+      vendaCoberta: this.fetchOptionsVendaCoberta(ticker),
+    }).pipe(
+      map(({ opcoes, vendaCoberta }) => this.selectMostRecentOptions(opcoes, vendaCoberta))
     );
+  }
+
+  private selectMostRecentOptions(
+    opcoes: OptionWithGreeks[],
+    vendaCoberta: OptionWithGreeks[]
+  ): OptionWithGreeks[] {
+    if (opcoes.length === 0) return vendaCoberta;
+    if (vendaCoberta.length === 0) return opcoes;
+
+    const opcoesTime = this.getLatestMarketDataTime(opcoes);
+    const vendaCobertaTime = this.getLatestMarketDataTime(vendaCoberta);
+
+    if (opcoesTime === null) return vendaCoberta;
+    if (vendaCobertaTime === null) return opcoes;
+    return vendaCobertaTime > opcoesTime ? vendaCoberta : opcoes;
+  }
+
+  private getLatestMarketDataTime(options: OptionWithGreeks[]): number | null {
+    const times = options
+      .map(option => option.marketDataTime ? Date.parse(option.marketDataTime) : NaN)
+      .filter(time => Number.isFinite(time));
+    return times.length > 0 ? Math.max(...times) : null;
   }
 
   private fetchOptionsVendaCoberta(ticker: string): Observable<OptionWithGreeks[]> {
@@ -204,7 +224,7 @@ export class MarketDataService {
   }
 
   /**
-   * Busca cotação + opções em paralelo (fonte principal: vendacoberta)
+    * Busca cotação + opções em paralelo (fonte principal de opções: opcoes.net.br)
    */
   fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; timestamp: Date }> {
     const stock = this.stocks.find(s => s.ticker === ticker) || {
@@ -433,7 +453,13 @@ export class MarketDataService {
 
   private parseSourceTimestamp(value: unknown): string | null {
     if (!value) return null;
-    const date = new Date(String(value));
+    const text = String(value);
+    // Datas da opcoes.net.br não têm horário; mantém a data no fuso local.
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(text);
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+    const date = dateOnly
+      ? new Date(`${text}T00:00:00`)
+      : new Date(hasTimezone ? text : `${text}Z`);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 

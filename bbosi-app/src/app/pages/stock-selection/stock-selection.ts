@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { DatePipe } from '@angular/common';
 import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
@@ -13,7 +14,7 @@ import { finalize, switchMap } from 'rxjs';
 @Component({
   selector: 'app-stock-selection',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule, RelativeTimePipe],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule, DatePipe, RelativeTimePipe],
   templateUrl: './stock-selection.html',
   styleUrl: './stock-selection.scss',
 })
