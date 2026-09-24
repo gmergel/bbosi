@@ -343,6 +343,7 @@ export class MarketDataService {
         moneyness: opt.moneyness,
         distancePercent,
         premiumPercent,
+        marketDataTime: this.parseSourceTimestamp(opt.externalReferenceDate || opt.createdAt),
       });
     }
 
@@ -356,7 +357,7 @@ export class MarketDataService {
    * [5] dist%, [6] último, [7] var%, [8] data/hora, [9] negócios,
    * [10] vol financeiro, [11] iq, [12] coberto, [13] travado,
    * [14] descoberto, [15] tit, [16] lanc, [17] vol.impl,
-   * [18] delta, [19] gamma, [20] theta($), [21] theta(%), [22] vega
+  * [18] delta, [19] gamma, [20] theta($), [21] theta(%), [22] vega
    */
   private parseOptionsChain(response: OptionsChainResponse, stockTicker: string): OptionWithGreeks[] {
     if (!response?.success || !response.requests?.[0]?.results?.expirations) {
@@ -426,7 +427,14 @@ export class MarketDataService {
       moneyness,
       distancePercent,
       premiumPercent,
+      marketDataTime: this.parseSourceTimestamp(row[8]),
     };
+  }
+
+  private parseSourceTimestamp(value: unknown): string | null {
+    if (!value) return null;
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
   }
 
   private parseNumber(value: any): number {

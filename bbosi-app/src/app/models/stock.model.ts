@@ -14,6 +14,7 @@ export interface OptionData {
   trades: number;         // Número de negócios
   volume: number;         // Volume financeiro (R$)
   tradePercent: number;
+  marketDataTime?: string | null; // Data/hora de referência informada pela fonte
 }
 
 export interface OptionIndicators extends OptionData {

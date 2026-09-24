@@ -97,8 +97,8 @@ async function handlePositions(request, env, requestUrl) {
         INSERT INTO sold_options (
           id, option_ticker, stock_ticker, strike, sell_price, sell_date,
           expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi,
-          stock_price, option_price, last_refresh, buyback_price, buyback_date, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          stock_price, option_price, last_refresh, market_data_time, buyback_price, buyback_date, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         option.id,
         option.optionTicker,
@@ -116,6 +116,7 @@ async function handlePositions(request, env, requestUrl) {
         option.stockPrice,
         option.optionPrice,
         option.lastRefresh ?? null,
+        option.marketDataTime ?? null,
         option.buybackPrice ?? null,
         option.buybackDate ?? null,
         new Date().toISOString(),
@@ -153,6 +154,7 @@ function fromRow(row) {
     stockPrice: row.stock_price,
     optionPrice: row.option_price,
     lastRefresh: row.last_refresh,
+    marketDataTime: row.market_data_time,
     buybackPrice: row.buyback_price,
     buybackDate: row.buyback_date,
   };

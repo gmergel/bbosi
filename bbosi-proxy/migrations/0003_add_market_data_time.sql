@@ -1,0 +1,1 @@
+ALTER TABLE sold_options ADD COLUMN market_data_time TEXT;

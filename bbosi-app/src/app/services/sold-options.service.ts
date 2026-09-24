@@ -27,6 +27,7 @@ export interface SoldOption {
   gamma?: number;
   theta?: number;
   lastRefresh?: string;
+  marketDataTime?: string;
   buybackPrice?: number;
   buybackDate?: string;
 }
@@ -81,6 +82,7 @@ export class SoldOptionsService {
       gamma: option.gama,
       theta: option.theta,
       lastRefresh: new Date().toISOString(),
+      marketDataTime: option.marketDataTime ?? undefined,
     };
 
     const current = [...this._soldOptions(), sold];
@@ -209,6 +211,7 @@ export class SoldOptionsService {
               tradingDays: optInd ? optInd.tradingDays : (rawOpt ? rawOpt.tradingDays : s.tradingDays),
               vdxx: optInd ? optInd.vdxx : s.vdxx,
               optionPrice: optInd ? optInd.price : (rawOpt ? rawOpt.price : (s.optionPrice ?? s.sellPrice)),
+              marketDataTime: optInd?.marketDataTime ?? rawOpt?.marketDataTime ?? s.marketDataTime,
               lastRefresh: now,
             };
           });
