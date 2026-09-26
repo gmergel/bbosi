@@ -80,3 +80,49 @@ export const environment = {
 ```
 
 Depois disso, o frontend continua publicado no GitHub Pages, mas os dados passam por um proxy próprio.
+
+## Alertas no Telegram
+
+O Worker verifica as posições ativas sincronizadas no D1 a cada 5 minutos, mesmo
+com a página fechada. Envia somente stop dinâmico e alvo de 50% de lucro para
+um chat privado vinculado. Não executa ordens.
+
+1. No Telegram, abra o bot oficial **@BotFather**, use `/newbot` e anote o token
+  e o nome de usuário do bot. Não coloque o token no frontend ou no repositório.
+2. No `wrangler.toml` do Worker, mantenha `[triggers]` com
+  `crons = ["*/5 * * * *"]` e configure o nome público do bot:
+
+  ```toml
+  [vars]
+  TELEGRAM_BOT_USERNAME = "nome_do_seu_bot"
+  ```
+
+3. Aplique a migração e cadastre os segredos com o Wrangler (ele solicitará os
+  valores no terminal, sem passar pelo chat):
+
+  ```bash
+  npx wrangler d1 migrations apply bbosi --remote
+  npx wrangler secret put TELEGRAM_BOT_TOKEN
+  npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+  npm run deploy
+  ```
+
+  Escolha para `TELEGRAM_WEBHOOK_SECRET` uma cadeia aleatória de 32 a 256
+  caracteres contendo apenas letras, números, `_` ou `-`. O Worker registra
+  automaticamente o webhook ao gerar o link de vínculo; nenhum token precisa
+  ser enviado manualmente à API do Telegram. Para desenvolvimento local, use
+  `.dev.vars` ignorado pelo Git com esses segredos.
+4. Publique também o frontend atualizado. Abra a página com o token de
+  sincronização configurado, toque no sino de alertas, gere o link e abra-o no
+  Telegram. Na conversa privada, toque em **Iniciar**; o app mostrará
+  "Vinculado" em até cinco segundos. Use **Enviar teste**. Para parar os
+  alertas, use **Desvincular**. Apenas um chat pode estar vinculado por vez.
+
+O app precisa do Telegram instalado e com notificações permitidas no celular.
+As posições precisam estar sincronizadas no D1; editar apenas dados locais sem
+token não alimenta o monitor. Só cotações da opção e da ação com horário válido
+e até 15 minutos de idade durante o pregão (dias úteis, 10h-18h de Brasília)
+geram alertas. Em feriados, atrasos ou indisponibilidade das fontes, não há
+alerta até chegarem dados novos. A verificação de cinco minutos não equivale
+a preço negociável nem garante entrega instantânea. O primeiro vínculo pode
+notificar posições já além dos limites se houver cotação recente.

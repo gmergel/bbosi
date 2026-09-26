@@ -1,3 +1,5 @@
+import { checkPositionAlerts, sendTelegram } from './telegram-alerts.mjs';
+
 const TARGETS = {
   '/api/vendacoberta': {
     origin: 'https://api.vendacoberta.com.br',
@@ -21,7 +23,7 @@ const TARGETS = {
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-BBOSI-Token',
   'Access-Control-Max-Age': '86400',
 };
@@ -33,6 +35,10 @@ export default {
     }
 
     const requestUrl = new URL(request.url);
+
+    if (requestUrl.pathname.startsWith('/api/telegram/')) {
+      return handleTelegram(request, env, requestUrl);
+    }
 
     if (requestUrl.pathname === '/api/positions' || requestUrl.pathname.startsWith('/api/positions/')) {
       return handlePositions(request, env, requestUrl);
@@ -73,7 +79,95 @@ export default {
       headers: responseHeaders,
     });
   },
+  async scheduled(_controller, env) {
+    await checkPositionAlerts(env);
+  },
 };
+
+async function handleTelegram(request, env, url) {
+  if (url.pathname === '/api/telegram/webhook') {
+    if (request.method !== 'POST') return json({ error: 'Metodo nao permitido' }, 405);
+    if (!env.TELEGRAM_WEBHOOK_SECRET || request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TELEGRAM_WEBHOOK_SECRET) {
+      return json({ error: 'Nao autorizado' }, 401);
+    }
+    const body = await request.text();
+    if (body.length > 8192) return json({ error: 'Corpo muito grande' }, 413);
+    let update;
+    try { update = JSON.parse(body); } catch { return json({ error: 'JSON invalido' }, 400); }
+    const chat = update?.message?.chat;
+    const match = /^\/start ([A-Za-z0-9_-]{32,64})$/.exec(update?.message?.text ?? '');
+    if (chat?.type !== 'private' || !match) return json({ ok: true }, 200);
+    const hash = await hashCode(match[1]);
+    const consumed = await env.DB.prepare(
+      'DELETE FROM telegram_link WHERE id = 1 AND code_hash = ? AND expires_at > ? RETURNING id'
+    ).bind(hash, new Date().toISOString()).first();
+    if (consumed) {
+      await env.DB.prepare('INSERT OR IGNORE INTO telegram_chat (id, chat_id) VALUES (1, ?)')
+        .bind(String(chat.id)).run();
+      await sendTelegram(env, String(chat.id), 'BBOSI: alertas de stop e lucro ativados.').catch(() => {});
+    }
+    return json({ ok: true }, 200);
+  }
+
+  if (!envTokenMatches(request, env, url)) return json({ error: 'Nao autorizado' }, 401);
+  if (url.pathname === '/api/telegram/status' && request.method === 'GET') {
+    const chat = await env.DB.prepare('SELECT id FROM telegram_chat WHERE id = 1').first();
+    return json({ linked: Boolean(chat) }, 200);
+  }
+  if (url.pathname === '/api/telegram/link' && request.method === 'POST') {
+    if (!env.TELEGRAM_BOT_TOKEN || !/^[A-Za-z0-9_]+$/.test(env.TELEGRAM_BOT_USERNAME ?? '') ||
+        !/^[A-Za-z0-9_-]{32,256}$/.test(env.TELEGRAM_WEBHOOK_SECRET ?? '') || url.protocol !== 'https:') {
+      return json({ error: 'Bot nao configurado' }, 503);
+    }
+    if (await env.DB.prepare('SELECT id FROM telegram_chat WHERE id = 1').first()) {
+      return json({ error: 'Telegram ja vinculado' }, 409);
+    }
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: new URL('/api/telegram/webhook', url).toString(),
+          secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+          allowed_updates: ['message'],
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok || !(await response.json()).ok) return json({ error: 'Falha ao registrar webhook do Telegram' }, 502);
+    } catch {
+      return json({ error: 'Falha ao registrar webhook do Telegram' }, 502);
+    }
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(24)), byte => byte.toString(16).padStart(2, '0')).join('');
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+    await env.DB.prepare('INSERT INTO telegram_link (id, code_hash, expires_at) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at')
+      .bind(await hashCode(code), expiresAt).run();
+    return json({ url: `https://t.me/${env.TELEGRAM_BOT_USERNAME}?start=${code}`, expiresAt }, 200);
+  }
+  if (url.pathname === '/api/telegram/link' && request.method === 'DELETE') {
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM telegram_chat WHERE id = 1'),
+      env.DB.prepare('DELETE FROM telegram_link WHERE id = 1'),
+      env.DB.prepare('DELETE FROM telegram_alert_state'),
+    ]);
+    return json({ ok: true }, 200);
+  }
+  if (url.pathname === '/api/telegram/test' && request.method === 'POST') {
+    const chat = await env.DB.prepare('SELECT chat_id FROM telegram_chat WHERE id = 1').first();
+    if (!chat) return json({ error: 'Telegram nao vinculado' }, 409);
+    try {
+      await sendTelegram(env, chat.chat_id, 'BBOSI: notificacoes funcionando.');
+      return json({ ok: true }, 200);
+    } catch {
+      return json({ error: 'Nao foi possivel enviar mensagem. Confira o bot no Telegram.' }, 502);
+    }
+  }
+  return json({ error: 'Rota nao encontrada' }, 404);
+}
+
+async function hashCode(code) {
+  const bytes = new TextEncoder().encode(code);
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
+}
 
 async function handlePositions(request, env, requestUrl) {
   if (!envTokenMatches(request, env, requestUrl)) {

@@ -5,6 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { DatePipe } from '@angular/common';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { MarketDataService } from '../../services/market-data.service';
 import { SoldOptionsService, SoldOption, RollSignal } from '../../services/sold-options.service';
 import { Stock } from '../../models/stock.model';
@@ -21,8 +23,11 @@ import { finalize, switchMap } from 'rxjs';
 export class StockSelectionComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private marketData = inject(MarketDataService);
+  private http = inject(HttpClient);
+  private readonly telegramUrl = environment.positionsBaseUrl.replace(/\/positions$/, '/telegram');
   soldOptionsService = inject(SoldOptionsService);
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private telegramInterval: ReturnType<typeof setInterval> | null = null;
   private readonly ACTIVE_REFRESH_MS = 10000;
   editingSellTicker = signal<string | null>(null);
   sellPriceInput = signal<string>('');
@@ -30,6 +35,11 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   buybackPriceInput = signal<string>('');
   isSyncTokenEditorOpen = signal<boolean>(false);
   syncTokenInput = signal<string>('');
+  telegramOpen = signal(false);
+  telegramLinked = signal(false);
+  telegramLink = signal('');
+  telegramMessage = signal('');
+  telegramBusy = signal(false);
 
   Math = Math; // Expose Math for template
 
@@ -68,6 +78,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
+    this.stopTelegramPolling();
   }
 
   private refreshSoldData(): void {
@@ -121,6 +132,86 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   unlinkSyncToken(): void {
     this.soldOptionsService.clearSyncToken();
+    this.telegramOpen.set(false);
+    this.telegramLink.set('');
+    this.stopTelegramPolling();
+  }
+
+  private telegramHeaders(): HttpHeaders {
+    return new HttpHeaders({ 'X-BBOSI-Token': this.soldOptionsService.getSyncToken() ?? '' });
+  }
+
+  toggleTelegram(): void {
+    this.telegramOpen.update(open => !open);
+    if (this.telegramOpen()) this.checkTelegramStatus();
+    else this.stopTelegramPolling();
+  }
+
+  checkTelegramStatus(): void {
+    this.http.get<{ linked: boolean }>(`${this.telegramUrl}/status`, { headers: this.telegramHeaders() }).subscribe({
+      next: ({ linked }) => {
+        this.telegramLinked.set(linked);
+        if (linked) {
+          this.telegramLink.set('');
+          this.telegramMessage.set('');
+          this.stopTelegramPolling();
+        }
+      },
+      error: () => this.telegramMessage.set('Não foi possível consultar o vínculo. Verifique a sincronização.'),
+    });
+  }
+
+  createTelegramLink(): void {
+    this.telegramBusy.set(true);
+    this.telegramMessage.set('');
+    this.http.post<{ url: string }>(`${this.telegramUrl}/link`, {}, { headers: this.telegramHeaders() }).subscribe({
+      next: ({ url }) => {
+        this.telegramLink.set(url);
+        this.telegramBusy.set(false);
+        this.stopTelegramPolling();
+        this.telegramInterval = setInterval(() => this.checkTelegramStatus(), 5000);
+      },
+      error: () => {
+        this.telegramBusy.set(false);
+        this.telegramMessage.set('Não foi possível criar o vínculo. Verifique a configuração do bot.');
+      },
+    });
+  }
+
+  testTelegram(): void {
+    this.telegramBusy.set(true);
+    this.http.post(`${this.telegramUrl}/test`, {}, { headers: this.telegramHeaders() }).subscribe({
+      next: () => {
+        this.telegramBusy.set(false);
+        this.telegramMessage.set('Mensagem de teste enviada.');
+      },
+      error: () => {
+        this.telegramBusy.set(false);
+        this.telegramMessage.set('Não foi possível entregar a mensagem de teste.');
+      },
+    });
+  }
+
+  disconnectTelegram(): void {
+    if (!window.confirm('Desvincular o Telegram e parar os alertas no celular?')) return;
+    this.telegramBusy.set(true);
+    this.http.delete(`${this.telegramUrl}/link`, { headers: this.telegramHeaders() }).subscribe({
+      next: () => {
+        this.telegramBusy.set(false);
+        this.telegramLinked.set(false);
+        this.telegramLink.set('');
+        this.telegramMessage.set('Telegram desvinculado.');
+      },
+      error: () => {
+        this.telegramBusy.set(false);
+        this.telegramMessage.set('Não foi possível desvincular o Telegram.');
+      },
+    });
+  }
+
+  private stopTelegramPolling(): void {
+    if (this.telegramInterval) clearInterval(this.telegramInterval);
+    this.telegramInterval = null;
   }
 
   editSellPrice(sold: SoldOption, event: Event): void {

@@ -69,6 +69,21 @@
   color: #4fd1c5;
 }
 
+.telegram-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(79, 209, 197, 0.3);
+
+  strong { width: 100%; font-size: 0.85rem; }
+  span { font-size: 0.78rem; color: var(--mat-sys-on-surface-variant); }
+}
+
+.telegram-settings__actions { display: flex; gap: 8px; }
+
 .sync-menu__status {
   display: flex;
   align-items: center;

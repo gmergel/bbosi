@@ -205,12 +205,15 @@ export class SoldOptionsService {
               ...s,
               stockPrice: result.stock.price,
               bbosi,
-              nv: optInd ? optInd.nv : s.nv,
+              nv: optInd ? optInd.nv : rawOpt
+                ? Math.round(((rawOpt.strike >= result.stock.price ? rawOpt.price : Math.max(0, rawOpt.price - (result.stock.price - rawOpt.strike))) - Math.abs(rawOpt.delta) - Math.abs(rawOpt.gamma)) * 100) / 100
+                : s.nv,
               ve: optInd ? optInd.ve : s.ve,
               lastroPercent: optInd ? optInd.lastroPercent : s.lastroPercent,
               tradingDays: optInd ? optInd.tradingDays : (rawOpt ? rawOpt.tradingDays : s.tradingDays),
               vdxx: optInd ? optInd.vdxx : s.vdxx,
               optionPrice: optInd ? optInd.price : (rawOpt ? rawOpt.price : (s.optionPrice ?? s.sellPrice)),
+              gamma: optInd?.gama ?? rawOpt?.gamma ?? s.gamma,
               marketDataTime: optInd?.marketDataTime ?? rawOpt?.marketDataTime ?? s.marketDataTime,
               lastRefresh: now,
             };
@@ -365,6 +368,10 @@ export class SoldOptionsService {
   clearSyncToken(): void {
     localStorage.removeItem(SYNC_TOKEN_KEY);
     this._hasSyncToken.set(false);
+  }
+
+  getSyncToken(): string | null {
+    return localStorage.getItem(SYNC_TOKEN_KEY);
   }
 
   private hasStoredSyncToken(): boolean {

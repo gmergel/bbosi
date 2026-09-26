@@ -221,6 +221,11 @@
         <span class="timestamp"><mat-icon class="timestamp__icon">schedule</mat-icon>{{ lastUpdated() | relativeTime }}</span>
       }
       @if (soldOptionsService.hasSyncToken()) {
+        <button mat-icon-button type="button" class="sync-status-button"
+                [class.sync-status-button--active]="telegramLinked()"
+                (click)="toggleTelegram()" aria-label="Alertas pelo Telegram" matTooltip="Alertas pelo Telegram">
+          <mat-icon>notifications_active</mat-icon>
+        </button>
         <button mat-icon-button
                 type="button"
                 class="sync-status-button sync-status-button--active"
@@ -250,6 +255,28 @@
         </button>
       }
     </div>
+    @if (telegramOpen() && soldOptionsService.hasSyncToken()) {
+      <div class="telegram-settings" role="region" aria-label="Alertas pelo Telegram">
+        <strong>Alertas pelo Telegram</strong>
+        @if (telegramLinked()) {
+          <span>Vinculado. Stop e lucro serão verificados a cada 5 minutos.</span>
+          <div class="telegram-settings__actions">
+            <button mat-button type="button" (click)="testTelegram()" [disabled]="telegramBusy()">Enviar teste</button>
+            <button mat-button type="button" (click)="disconnectTelegram()" [disabled]="telegramBusy()">Desvincular</button>
+          </div>
+        } @else {
+          <span>Abra o bot no celular para receber os alertas.</span>
+          @if (telegramLink()) {
+            <a mat-flat-button [href]="telegramLink()" target="_blank" rel="noopener noreferrer">Abrir Telegram</a>
+            <span>O link expira em 10 minutos.</span>
+            <button mat-button type="button" (click)="createTelegramLink()" [disabled]="telegramBusy()">Gerar novo link</button>
+          } @else {
+            <button mat-flat-button type="button" (click)="createTelegramLink()" [disabled]="telegramBusy()">Vincular Telegram</button>
+          }
+        }
+        @if (telegramMessage()) { <span role="status">{{ telegramMessage() }}</span> }
+      </div>
+    }
     @if (isSyncTokenEditorOpen()) {
       <div class="sync-token-editor" role="dialog" aria-label="Configurar sincronizacao">
         <div class="sync-token-editor__copy">
