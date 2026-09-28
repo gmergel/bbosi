@@ -11,15 +11,18 @@ export function stopPercent(sellPrice, tradingDays, gamma, nv, realized) {
 }
 
 export function alertFor(position, quote, stockPrice) {
-    if (!(position.sell_price > 0) || !(quote.price > 0) || !(stockPrice > 0) ||
-      !(quote.strike > 0) || !Number.isFinite(quote.gamma) ||
-      !Number.isFinite(quote.delta) || !Number.isFinite(quote.tradingDays)) return null;
+  if (!(position.sell_price > 0) || !(quote.price > 0)) return null;
   const captured = (position.sell_price - quote.price) / position.sell_price * 100;
+  if (captured >= 50) {
+    return { level: 'profit', captured, limit: position.sell_price * 0.5 };
+  }
+  if (!(stockPrice > 0) || !(quote.strike > 0) || !Number.isFinite(quote.gamma) ||
+      !Number.isFinite(quote.delta) || !Number.isFinite(quote.tradingDays)) return null;
   const ve = quote.strike >= stockPrice ? quote.price : Math.max(0, quote.price - (stockPrice - quote.strike));
   const nv = Math.round((ve - Math.abs(quote.delta) - Math.abs(quote.gamma)) * 100) / 100;
   const stop = stopPercent(position.sell_price, quote.tradingDays, Number(quote.gamma.toFixed(4)), nv, captured);
-  const level = captured <= -stop ? 'stop' : captured >= 50 ? 'profit' : 'normal';
-  return { level, captured, limit: position.sell_price * (level === 'profit' ? 0.5 : 1 + stop / 100) };
+  const level = captured <= -stop ? 'stop' : 'normal';
+  return { level, captured, limit: position.sell_price * (1 + stop / 100) };
 }
 
 function marketOpen(now) {
@@ -137,11 +140,11 @@ export async function checkPositionAlerts(env, now = new Date()) {
   for (const [ticker, group] of groups) {
     let market;
     try { market = await marketFor(ticker); } catch { continue; }
-    if (!fresh(market.stockTime, now) || !(market.stockPrice > 0)) continue;
+    const stockPrice = fresh(market.stockTime, now) ? market.stockPrice : NaN;
     for (const position of group) {
       const quote = market.quotes.get(position.option_ticker);
       if (!quote || !fresh(quote.time, now)) continue;
-      const alert = alertFor(position, quote, market.stockPrice);
+      const alert = alertFor(position, quote, stockPrice);
       if (!alert) continue;
       if (alert.level === 'normal') {
         await env.DB.prepare(`INSERT INTO telegram_alert_state (position_id, sell_price, level, quote_time)

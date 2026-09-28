@@ -35,9 +35,33 @@ test('stop and profit follow the UI thresholds', () => {
   assert.equal(stopPercent(10, 3, 0.35, -0.1, 0), 18);
   assert.equal(alertFor(position, quote, 30).level, 'stop');
   assert.equal(alertFor(position, { ...quote, price: 0.5 }, 30).level, 'profit');
+  assert.equal(alertFor(position, { price: 0.5 }, NaN).level, 'profit');
   assert.equal(alertFor(position, { ...quote, price: 0.8 }, 30).level, 'normal');
   assert.equal(alertFor(position, { ...quote, gamma: NaN }, 30), null);
   assert.equal(alertFor(position, { ...quote, strike: NaN }, 30), null);
+});
+
+test('cron sends profit alert with a fresh option quote when the stock quote is stale', async () => {
+  const { DB, sqlite } = database();
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRJ563', 'PETR4', 0.46, NULL)");
+  const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
+  const now = new Date('2026-09-25T15:00:00Z');
+  const sent = [];
+  globalThis.fetch = async (url, options) => {
+    if (String(url).includes('telegram.org')) { sent.push(JSON.parse(options.body).text); return Response.json({ ok: true }); }
+    if (String(url).includes('yahoo.com')) return Response.json({ chart: { result: [{ meta: { regularMarketPrice: 48.93, regularMarketTime: (now.getTime() - 60 * 60_000) / 1000 } }] } });
+    if (String(url).includes('vendacoberta')) return Response.json({ options: [] });
+    const row = Array(23).fill(0);
+    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.21; row[8] = now.toISOString();
+    return Response.json({ success: true, requests: [{ results: { expirations: [{ du: 14, calls: [row] }] } }] });
+  };
+
+  await checkPositionAlerts(env, now);
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /ALVO DE LUCRO: PETRJ563/);
+  assert.match(sent[0], /Opcao R\$ 0\.21 \| limite R\$ 0\.23/);
+  sqlite.close();
 });
 
 test('webhook requires secret, private chat and one-time code', async () => {
