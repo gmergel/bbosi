@@ -13,7 +13,15 @@ function database() {
     CREATE TABLE telegram_chat (id INTEGER PRIMARY KEY, chat_id TEXT);
     CREATE TABLE telegram_link (id INTEGER PRIMARY KEY, code_hash TEXT, expires_at TEXT);
     CREATE TABLE telegram_alert_state (position_id TEXT PRIMARY KEY, sell_price REAL, level TEXT, quote_time TEXT, claimed_until TEXT);
-    CREATE TABLE sold_options (id TEXT PRIMARY KEY, option_ticker TEXT, stock_ticker TEXT, sell_price REAL, buyback_date TEXT);
+    CREATE TABLE sold_options (
+      id TEXT PRIMARY KEY, option_ticker TEXT NOT NULL, stock_ticker TEXT NOT NULL,
+      strike REAL NOT NULL, sell_price REAL NOT NULL, sell_date TEXT NOT NULL,
+      expiration TEXT NOT NULL, trading_days INTEGER NOT NULL, nv REAL NOT NULL,
+      ve REAL NOT NULL, vdxx REAL NOT NULL, lastro_percent REAL NOT NULL,
+      bbosi REAL NOT NULL, stock_price REAL NOT NULL, option_price REAL NOT NULL,
+      last_refresh TEXT, updated_at TEXT NOT NULL, buyback_price REAL,
+      buyback_date TEXT, market_data_time TEXT
+    );
   `);
   const prepare = sql => {
     const statement = sqlite.prepare(sql);
@@ -43,7 +51,7 @@ test('stop and profit follow the UI thresholds', () => {
 
 test('cron sends profit alert with an option quote from the current session when the stock quote is stale', async () => {
   const { DB, sqlite } = database();
-  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRJ563', 'PETR4', 0.46, NULL)");
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at) VALUES ('p1', 'PETRJ563', 'PETR4', 56.36, 0.46, '', '', 14, 0, 0, 0, 0, 0, 48.93, 0.21, '')");
   const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
   const now = new Date('2026-09-25T15:00:00Z');
   const sent = [];
@@ -66,7 +74,7 @@ test('cron sends profit alert with an option quote from the current session when
 
 test('cron ignores an option quote from the previous session', async () => {
   const { DB, sqlite } = database();
-  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRJ563', 'PETR4', 0.46, NULL)");
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at) VALUES ('p1', 'PETRJ563', 'PETR4', 56.36, 0.46, '', '', 14, 0, 0, 0, 0, 0, 48.93, 0.21, '')");
   const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
   const now = new Date('2026-09-25T15:00:00Z');
   let messages = 0;
@@ -114,9 +122,34 @@ test('webhook requires secret, private chat and one-time code', async () => {
   sqlite.close();
 });
 
+test('positions PUT persists the complete payload', async () => {
+  const { DB, sqlite } = database();
+  const env = { DB, POSITIONS_TOKEN: 'secret' };
+  const position = {
+    id: 'p1', optionTicker: 'PETRJ563', stockTicker: 'PETR4', strike: 56.36,
+    sellPrice: 0.46, sellDate: '2026-09-01T12:00:00.000Z', expiration: '2026-10-16T00:00:00.000Z',
+    tradingDays: 14, nv: 0.09, ve: 0.18, vdxx: 1.5, lastroPercent: 15.18,
+    bbosi: 47.3, stockPrice: 48.93, optionPrice: 0.21,
+    lastRefresh: '2026-09-28T19:48:00.000Z', marketDataTime: '2026-09-28T19:21:00.000Z',
+  };
+  const response = await worker.fetch(new Request('https://example.com/api/positions', {
+    method: 'PUT', headers: { 'X-BBOSI-Token': 'secret', 'Content-Type': 'application/json' },
+    body: JSON.stringify([position]),
+  }), env);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+  const stored = sqlite.prepare('SELECT option_ticker, sell_price, option_price, market_data_time FROM sold_options WHERE id = ?').get('p1');
+  assert.deepEqual({ ...stored }, {
+    option_ticker: 'PETRJ563', sell_price: 0.46, option_price: 0.21,
+    market_data_time: '2026-09-28T19:21:00.000Z',
+  });
+  sqlite.close();
+});
+
 test('cron sends on transitions, ignores stale quotes and closed positions', async () => {
   const { DB, sqlite } = database();
-  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRA1', 'PETR4', 1, NULL)");
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at) VALUES ('p1', 'PETRA1', 'PETR4', 35, 1, '', '', 12, 0, 0, 0, 0, 0, 30, 1, '')");
   const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
   const now = new Date('2026-09-25T15:00:00Z');
   let price = 1.4;
@@ -153,7 +186,7 @@ test('cron sends on transitions, ignores stale quotes and closed positions', asy
 
 test('failed delivery is retried and concurrent checks claim once', async () => {
   const { DB, sqlite } = database();
-  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRA1', 'PETR4', 1, NULL)");
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at) VALUES ('p1', 'PETRA1', 'PETR4', 35, 1, '', '', 12, 0, 0, 0, 0, 0, 30, 1, '')");
   const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
   const now = new Date('2026-09-25T15:00:00Z');
   let fail = true;
