@@ -41,6 +41,31 @@ export interface RollSignal {
 const STORAGE_KEY = 'bbosi-sold-options';
 const SYNC_TOKEN_KEY = 'bbosi-sync-token';
 
+export function mergeRemoteSoldOptions(remote: SoldOption[], current: SoldOption[]): SoldOption[] {
+  return remote.map(remoteOption => {
+    const currentOption = current.find(option => option.id === remoteOption.id)
+      ?? current.find(option => option.optionTicker === remoteOption.optionTicker);
+    if (!currentOption) return remoteOption;
+
+    return {
+      ...remoteOption,
+      tradingDays: currentOption.tradingDays,
+      nv: currentOption.nv,
+      ve: currentOption.ve,
+      vdxx: currentOption.vdxx,
+      lastroPercent: currentOption.lastroPercent,
+      bbosi: currentOption.bbosi,
+      stockPrice: currentOption.stockPrice,
+      optionPrice: currentOption.optionPrice,
+      delta: currentOption.delta,
+      gamma: currentOption.gamma,
+      theta: currentOption.theta,
+      lastRefresh: currentOption.lastRefresh,
+      marketDataTime: currentOption.marketDataTime,
+    };
+  });
+}
+
 @Injectable({ providedIn: 'root' })
 export class SoldOptionsService {
   private marketData = inject(MarketDataService);
@@ -240,13 +265,14 @@ export class SoldOptionsService {
       headers: { 'X-BBOSI-Token': token },
     }).pipe(
       map(options => {
-        const normalized = options.map(option => ({
+        const remote = options.map(option => ({
           ...option,
           expiration: new Date(option.expiration),
         }));
-        this._soldOptions.set(normalized);
-        this.updateActiveOptions(normalized);
-        this.saveToStorage(normalized);
+        const merged = mergeRemoteSoldOptions(remote, this._soldOptions());
+        this._soldOptions.set(merged);
+        this.updateActiveOptions(merged);
+        this.saveToStorage(merged);
       }),
       map(() => void 0),
       catchError(() => of(void 0)),
