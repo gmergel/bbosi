@@ -1,4 +1,4 @@
-const MAX_QUOTE_AGE_MS = 15 * 60_000;
+const MAX_QUOTE_AGE_MS = 8 * 60 * 60_000;
 
 export function stopPercent(sellPrice, tradingDays, gamma, nv, realized) {
   if (sellPrice <= 0) return 25;

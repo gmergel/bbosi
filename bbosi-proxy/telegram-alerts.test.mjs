@@ -41,7 +41,7 @@ test('stop and profit follow the UI thresholds', () => {
   assert.equal(alertFor(position, { ...quote, strike: NaN }, 30), null);
 });
 
-test('cron sends profit alert with a fresh option quote when the stock quote is stale', async () => {
+test('cron sends profit alert with an option quote from the current session when the stock quote is stale', async () => {
   const { DB, sqlite } = database();
   sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRJ563', 'PETR4', 0.46, NULL)");
   const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
@@ -52,7 +52,7 @@ test('cron sends profit alert with a fresh option quote when the stock quote is 
     if (String(url).includes('yahoo.com')) return Response.json({ chart: { result: [{ meta: { regularMarketPrice: 48.93, regularMarketTime: (now.getTime() - 60 * 60_000) / 1000 } }] } });
     if (String(url).includes('vendacoberta')) return Response.json({ options: [] });
     const row = Array(23).fill(0);
-    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.21; row[8] = now.toISOString();
+    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.21; row[8] = new Date(now.getTime() - 2 * 60 * 60_000).toISOString();
     return Response.json({ success: true, requests: [{ results: { expirations: [{ du: 14, calls: [row] }] } }] });
   };
 
@@ -61,6 +61,27 @@ test('cron sends profit alert with a fresh option quote when the stock quote is 
   assert.equal(sent.length, 1);
   assert.match(sent[0], /ALVO DE LUCRO: PETRJ563/);
   assert.match(sent[0], /Opcao R\$ 0\.21 \| limite R\$ 0\.23/);
+  sqlite.close();
+});
+
+test('cron ignores an option quote from the previous session', async () => {
+  const { DB, sqlite } = database();
+  sqlite.exec("INSERT INTO telegram_chat VALUES (1, '123'); INSERT INTO sold_options VALUES ('p1', 'PETRJ563', 'PETR4', 0.46, NULL)");
+  const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
+  const now = new Date('2026-09-25T15:00:00Z');
+  let messages = 0;
+  globalThis.fetch = async url => {
+    if (String(url).includes('telegram.org')) { messages++; return Response.json({ ok: true }); }
+    if (String(url).includes('yahoo.com')) return Response.json({ chart: { result: [{ meta: { regularMarketPrice: 48.93, regularMarketTime: now.getTime() / 1000 } }] } });
+    if (String(url).includes('vendacoberta')) return Response.json({ options: [] });
+    const row = Array(23).fill(0);
+    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.21; row[8] = new Date(now.getTime() - 24 * 60 * 60_000).toISOString();
+    return Response.json({ success: true, requests: [{ results: { expirations: [{ du: 14, calls: [row] }] } }] });
+  };
+
+  await checkPositionAlerts(env, now);
+
+  assert.equal(messages, 0);
   sqlite.close();
 });
 
