@@ -209,3 +209,32 @@ test('failed delivery is retried and concurrent checks claim once', async () => 
   assert.equal(messages, 2);
   sqlite.close();
 });
+
+test('cron repeats a persistent alert once on a new trading day', async () => {
+  const { DB, sqlite } = database();
+  sqlite.exec(`
+    INSERT INTO telegram_chat VALUES (1, '123');
+    INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at)
+      VALUES ('p1', 'PETRJ563', 'PETR4', 56.36, 0.46, '', '', 14, 0, 0, 0, 0, 0, 48.05, 0.17, '');
+    INSERT INTO telegram_alert_state (position_id, sell_price, level, quote_time)
+      VALUES ('p1', 0.46, 'profit', '2026-09-28T19:21:00.000Z');
+  `);
+  const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
+  const now = new Date('2026-09-29T13:30:00.000Z');
+  let messages = 0;
+  globalThis.fetch = async url => {
+    if (String(url).includes('telegram.org')) { messages++; return Response.json({ ok: true }); }
+    if (String(url).includes('yahoo.com')) return Response.json({ chart: { result: [{ meta: { regularMarketPrice: 48.05, regularMarketTime: now.getTime() / 1000 } }] } });
+    if (String(url).includes('vendacoberta')) return Response.json({ options: [] });
+    const row = Array(23).fill(0);
+    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.17; row[8] = '2026-09-29T13:04:58.000Z';
+    return Response.json({ success: true, requests: [{ results: { expirations: [{ du: 13, calls: [row] }] } }] });
+  };
+
+  await checkPositionAlerts(env, now);
+  await checkPositionAlerts(env, now);
+
+  assert.equal(messages, 1);
+  assert.equal(sqlite.prepare("SELECT level FROM telegram_alert_state WHERE position_id = 'p1'").get().level, 'profit');
+  sqlite.close();
+});

@@ -157,9 +157,14 @@ export async function checkPositionAlerts(env, now = new Date()) {
       const claimedUntil = new Date(now.getTime() + 2 * 60_000).toISOString();
       const claim = await env.DB.prepare(`INSERT INTO telegram_alert_state (position_id, sell_price, level, quote_time, claimed_until)
         VALUES (?, ?, 'normal', '', ?) ON CONFLICT(position_id) DO UPDATE SET claimed_until = excluded.claimed_until
-        WHERE (claimed_until IS NULL OR claimed_until < ?) AND (sell_price != excluded.sell_price OR level != ?)
-        AND (sell_price != excluded.sell_price OR quote_time < ?) RETURNING position_id`)
-        .bind(position.id, position.sell_price, claimedUntil, now.toISOString(), alert.level, quote.time).first();
+        WHERE (claimed_until IS NULL OR claimed_until < ?)
+        AND (sell_price != excluded.sell_price OR (quote_time < ?
+          AND (level != ? OR substr(quote_time, 1, 10) != substr(?, 1, 10))))
+        RETURNING position_id`)
+        .bind(
+          position.id, position.sell_price, claimedUntil,
+          now.toISOString(), quote.time, alert.level, quote.time
+        ).first();
       if (!claim) continue;
       const stillActive = await env.DB.prepare('SELECT id FROM sold_options WHERE id = ? AND buyback_date IS NULL AND sell_price = ?')
         .bind(position.id, position.sell_price).first();
