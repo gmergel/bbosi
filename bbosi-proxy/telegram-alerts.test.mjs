@@ -45,6 +45,9 @@ test('stop and profit follow the UI thresholds', () => {
   assert.equal(alertFor(position, { ...quote, price: 0.5 }, 30).level, 'profit');
   assert.equal(alertFor(position, { price: 0.5 }, NaN).level, 'profit');
   assert.equal(alertFor(position, { ...quote, price: 0.8 }, 30).level, 'normal');
+  assert.deepEqual(alertFor(position, { ...quote, price: 0.8, delta: 0.7, gamma: 0.1 }, 30), {
+    level: 'nv', captured: 19.999999999999996, limit: 1.18, nv: 0,
+  });
   assert.equal(alertFor(position, { ...quote, gamma: NaN }, 30), null);
   assert.equal(alertFor(position, { ...quote, strike: NaN }, 30), null);
 });
@@ -236,5 +239,43 @@ test('cron repeats a persistent alert once on a new trading day', async () => {
 
   assert.equal(messages, 1);
   assert.equal(sqlite.prepare("SELECT level FROM telegram_alert_state WHERE position_id = 'p1'").get().level, 'profit');
+  sqlite.close();
+});
+
+test('cron sends NV alert and resets only after recovery above 0.05', async () => {
+  const { DB, sqlite } = database();
+  sqlite.exec(`
+    INSERT INTO telegram_chat VALUES (1, '123');
+    INSERT INTO sold_options (id, option_ticker, stock_ticker, strike, sell_price, sell_date, expiration, trading_days, nv, ve, vdxx, lastro_percent, bbosi, stock_price, option_price, updated_at)
+      VALUES ('p1', 'PETRJ563', 'PETR4', 56.36, 1, '', '', 13, 0, 0, 0, 0, 0, 48, 0.8, '');
+  `);
+  const env = { DB, TELEGRAM_BOT_TOKEN: 'bot' };
+  const now = new Date('2026-09-29T15:00:00.000Z');
+  let delta = 0.7;
+  let time = now.toISOString();
+  const sent = [];
+  globalThis.fetch = async (url, options) => {
+    if (String(url).includes('telegram.org')) { sent.push(JSON.parse(options.body).text); return Response.json({ ok: true }); }
+    if (String(url).includes('yahoo.com')) return Response.json({ chart: { result: [{ meta: { regularMarketPrice: 48, regularMarketTime: now.getTime() / 1000 } }] } });
+    if (String(url).includes('vendacoberta')) return Response.json({ options: [] });
+    const row = Array(23).fill(0);
+    row[0] = 'J563'; row[3] = 56.36; row[6] = 0.8; row[8] = time; row[18] = delta; row[19] = 0.1;
+    return Response.json({ success: true, requests: [{ results: { expirations: [{ du: 13, calls: [row] }] } }] });
+  };
+
+  await checkPositionAlerts(env, now);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /ATENCAO NV: PETRJ563/);
+  assert.match(sent[0], /NV: 0\.00/);
+
+  delta = 0.68;
+  time = new Date(now.getTime() + 60_000).toISOString();
+  await checkPositionAlerts(env, new Date(now.getTime() + 60_000));
+  assert.equal(sqlite.prepare("SELECT level FROM telegram_alert_state WHERE position_id = 'p1'").get().level, 'nv');
+
+  delta = 0.64;
+  time = new Date(now.getTime() + 120_000).toISOString();
+  await checkPositionAlerts(env, new Date(now.getTime() + 120_000));
+  assert.equal(sqlite.prepare("SELECT level FROM telegram_alert_state WHERE position_id = 'p1'").get().level, 'normal');
   sqlite.close();
 });

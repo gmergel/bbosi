@@ -21,8 +21,8 @@ export function alertFor(position, quote, stockPrice) {
   const ve = quote.strike >= stockPrice ? quote.price : Math.max(0, quote.price - (stockPrice - quote.strike));
   const nv = Math.round((ve - Math.abs(quote.delta) - Math.abs(quote.gamma)) * 100) / 100;
   const stop = stopPercent(position.sell_price, quote.tradingDays, Number(quote.gamma.toFixed(4)), nv, captured);
-  const level = captured <= -stop ? 'stop' : 'normal';
-  return { level, captured, limit: position.sell_price * (1 + stop / 100) };
+  const level = captured <= -stop ? 'stop' : nv <= 0 ? 'nv' : 'normal';
+  return { level, captured, limit: position.sell_price * (1 + stop / 100), nv };
 }
 
 function marketOpen(now) {
@@ -150,8 +150,9 @@ export async function checkPositionAlerts(env, now = new Date()) {
         await env.DB.prepare(`INSERT INTO telegram_alert_state (position_id, sell_price, level, quote_time)
           VALUES (?, ?, 'normal', ?) ON CONFLICT(position_id) DO UPDATE SET
           sell_price = excluded.sell_price, level = 'normal', quote_time = excluded.quote_time
-          WHERE (claimed_until IS NULL OR claimed_until < ?) AND (quote_time < excluded.quote_time OR sell_price != excluded.sell_price)`)
-          .bind(position.id, position.sell_price, quote.time, now.toISOString()).run();
+          WHERE (claimed_until IS NULL OR claimed_until < ?) AND (quote_time < excluded.quote_time OR sell_price != excluded.sell_price)
+          AND (level != 'nv' OR ? >= 0.05)`)
+          .bind(position.id, position.sell_price, quote.time, now.toISOString(), alert.nv).run();
         continue;
       }
       const claimedUntil = new Date(now.getTime() + 2 * 60_000).toISOString();
@@ -174,8 +175,11 @@ export async function checkPositionAlerts(env, now = new Date()) {
           .bind(position.id, claimedUntil).run();
         continue;
       }
-      const label = alert.level === 'stop' ? 'STOP' : 'ALVO DE LUCRO';
-      const text = `BBOSI ${label}: ${position.option_ticker}\nOpcao R$ ${quote.price.toFixed(2)} | limite R$ ${alert.limit.toFixed(2)}\nLucro capturado: ${alert.captured.toFixed(1)}%\nCotacao: ${new Date(quote.time).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (Brasilia)`;
+      const label = alert.level === 'stop' ? 'STOP' : alert.level === 'profit' ? 'ALVO DE LUCRO' : 'ATENCAO NV';
+      const detail = alert.level === 'nv'
+        ? `NV: ${alert.nv.toFixed(2)}\nOpcao R$ ${quote.price.toFixed(2)}`
+        : `Opcao R$ ${quote.price.toFixed(2)} | limite R$ ${alert.limit.toFixed(2)}`;
+      const text = `BBOSI ${label}: ${position.option_ticker}\n${detail}\nLucro capturado: ${alert.captured.toFixed(1)}%\nCotacao: ${new Date(quote.time).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (Brasilia)`;
       try {
         await sendTelegram(env, chat.chat_id, text);
         await env.DB.prepare('UPDATE telegram_alert_state SET level = ?, quote_time = ?, sell_price = ?, claimed_until = NULL WHERE position_id = ? AND claimed_until = ?')
