@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateDynamicStopPercent } from '../utils/dynamic-stop';
-import { mergeRemoteSoldOptions, SoldOption } from './sold-options.service';
+import { mergeRemoteSoldOptions, SoldOption, SoldOptionsService } from './sold-options.service';
 
 const createSoldOption = (overrides: Partial<SoldOption> = {}): SoldOption => ({
   id: 'position-1',
@@ -25,18 +24,34 @@ const createSoldOption = (overrides: Partial<SoldOption> = {}): SoldOption => ({
 });
 
 describe('SoldOptionsService stop logic', () => {
-  it('should tighten the stop for high gamma and short DTE', () => {
-    const stop = calculateDynamicStopPercent(10, 3, 0.35, -0.1, 0);
-
-    expect(stop).toBeLessThan(20);
-    expect(stop).toBeGreaterThanOrEqual(15);
+  it('keeps the stop at 25% regardless of gamma, DTE, NV or captured profit', () => {
+    for (const overrides of [
+      { tradingDays: 3, gamma: 0.35, nv: -0.1, optionPrice: 0.6 },
+      { tradingDays: 25, gamma: 0.08, nv: 0.4, optionPrice: 0.2 },
+      { sellPrice: 0 },
+    ]) {
+      expect(SoldOptionsService.prototype.getStopPercent(createSoldOption(overrides))).toBe(25);
+    }
   });
 
-  it('should keep a broader stop for calmer positions', () => {
-    const stop = calculateDynamicStopPercent(10, 25, 0.08, 0.4, 0);
+  it('does not trigger a stop below 125% of the sell price', () => {
+    const signal = SoldOptionsService.prototype.getRollSignal(createSoldOption({
+      sellPrice: 1, optionPrice: 1.249,
+    }));
 
-    expect(stop).toBeGreaterThanOrEqual(23);
-    expect(stop).toBeLessThanOrEqual(35);
+    expect(signal.shouldRoll).toBe(false);
+  });
+
+  it('triggers the fixed stop at and above 125% of the sell price', () => {
+    for (const optionPrice of [1.25, 1.251]) {
+      const signal = SoldOptionsService.prototype.getRollSignal(createSoldOption({
+        sellPrice: 1, optionPrice,
+      }));
+
+      expect(signal.shouldRoll).toBe(true);
+      expect(signal.reason).toContain('Stop fixo atingido (25%)');
+      expect(signal.severity).toBe('danger');
+    }
   });
 });
 

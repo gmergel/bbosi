@@ -82,9 +82,9 @@ O filtro usa média de negócios dos últimos cinco pregões; o BOSI usa os neg�
 
 ## Monitoramento e saída
 
-O serviço de posições atualiza preço da ação, preço da opção, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saída consideram alvo de 50% do prêmio capturado, proximidade do vencimento, risco de gamma, pressão do GerBOSI, NV negativo e stop dinâmico ajustado à sensibilidade da opção.
+O serviço de posições atualiza preço da ação, preço da opção, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saída consideram alvo de 50% do prêmio capturado, proximidade do vencimento, risco de gamma, pressão do GerBOSI, NV negativo e stop fixo de 25% sobre o prêmio vendido.
 
-O alvo de recompra é 50% do prêmio vendido. O stop de recompra é dinâmico: parte de uma base de 25% do prêmio vendido e é ajustado para cima ou para baixo conforme gamma, DTE, NV e nível de lucro já capturado. Em termos práticos, o limite varia entre 18% e 32% sobre o preço de venda, sendo mais apertado em opções de alta sensibilidade e mais tolerante em posições mais calmas. O texto da interface mostra o valor monetário e o percentual do stop atual; a regra é mantida no serviço de posições. Quando o NV fica negativo, o sistema apresenta um sinal de perigo e sugere considerar a recompra.
+O alvo de recompra é 50% do prêmio vendido. O stop de recompra é fixo em 25%: é atingido quando a cotação da opção chega a 125% do preço de venda. Gamma, DTE, NV e lucro capturado não alteram esse limite. A interface mostra o valor monetário e o percentual do stop; o serviço de posições e o monitor do Telegram aplicam a mesma regra. Quando o NV fica negativo, o sistema apresenta um sinal de perigo independente e sugere considerar a recompra. O sistema não executa ordens nem garante execução no preço sinalizado.
 
 ## Dados e persistencia
 

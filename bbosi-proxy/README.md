@@ -84,8 +84,13 @@ Depois disso, o frontend continua publicado no GitHub Pages, mas os dados passam
 ## Alertas no Telegram
 
 O Worker verifica as posições ativas sincronizadas no D1 a cada 5 minutos, mesmo
-com a página fechada. Envia somente stop dinâmico e alvo de 50% de lucro para
+com a página fechada. Envia alertas de stop fixo de 25%, alvo de 50% de lucro e NV para
 um chat privado vinculado. Não executa ordens.
+
+O stop é atingido quando a cotação da opção chega a 125% do preço de venda,
+sem ajustes por gamma, prazo ou NV. Como o alvo de lucro, o stop depende apenas
+de uma cotação recente da opção; o alerta de NV também exige dados válidos da
+ação e dos indicadores.
 
 1. No Telegram, abra o bot oficial **@BotFather**, use `/newbot` e anote o token
   e o nome de usuário do bot. Não coloque o token no frontend ou no repositório.

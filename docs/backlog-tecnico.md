@@ -36,8 +36,8 @@ Estabilizar a operação, melhorar a confiabilidade dos dados e elevar a qualida
 - Quadrinho de NV no cabeçalho do card, com cores indicativas e tooltip de ação: recompra, acompanhamento ou manutenção.
 - Taxa mensal estimada exibida na lista de opções; a taxa anualizada permanece como critério interno de elegibilidade.
 - Alvo diário composto exibido na lista de opções para indicar a taxa média necessária até o strike.
-- Barra de lucro com alvo de 50%, ponto de equilíbrio e stop dinâmico de recompra, ajustado por gamma, DTE, NV e lucro capturado.
-- O stop dinâmico é exibido na legenda como valor monetário e percentual atual; o ajuste foi calibrado para ser moderado em posições normais e mais apertado apenas em cenários de risco extremo.
+- Barra de lucro com alvo de 50%, ponto de equilíbrio e stop fixo de recompra de 25% sobre o prêmio vendido.
+- O stop fixo é exibido na legenda como valor monetário e percentual; app e Telegram usam o limite de 125% do preço de venda, sem ajustes por gamma, DTE ou NV.
 - Histórico de IV e liquidez no `localStorage`, além de sincronização opcional de posições pelo Worker/D1.
 
 ## Próximos passos

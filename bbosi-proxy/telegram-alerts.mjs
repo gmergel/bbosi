@@ -1,14 +1,6 @@
 const MAX_QUOTE_AGE_MS = 8 * 60 * 60_000;
 
-export function stopPercent(sellPrice, tradingDays, gamma, nv, realized) {
-  if (sellPrice <= 0) return 25;
-  const gammaAdj = Math.max(0, Math.min(8, Math.abs(gamma ?? 0) * 24));
-  const dteAdj = tradingDays <= 5 ? 8 : tradingDays <= 10 ? 6 : tradingDays <= 20 ? 3 : 0;
-  const nvAdj = nv < 0 ? 6 : nv < 0.2 ? 3 : 0;
-  const timeAdj = tradingDays >= 25 ? 4 : tradingDays >= 15 ? 2 : 0;
-  const profitAdj = realized >= 50 ? 2 : realized <= -10 ? -2 : 0;
-  return Number(Math.min(32, Math.max(18, 25 - gammaAdj - dteAdj - nvAdj + timeAdj + profitAdj)).toFixed(1));
-}
+export const STOP_PERCENT = 25;
 
 export function alertFor(position, quote, stockPrice) {
   if (!(position.sell_price > 0) || !(quote.price > 0)) return null;
@@ -16,13 +8,14 @@ export function alertFor(position, quote, stockPrice) {
   if (captured >= 50) {
     return { level: 'profit', captured, limit: position.sell_price * 0.5 };
   }
+  const limit = position.sell_price * (1 + STOP_PERCENT / 100);
+  if (quote.price >= limit) return { level: 'stop', captured, limit };
   if (!(stockPrice > 0) || !(quote.strike > 0) || !Number.isFinite(quote.gamma) ||
       !Number.isFinite(quote.delta) || !Number.isFinite(quote.tradingDays)) return null;
   const ve = quote.strike >= stockPrice ? quote.price : Math.max(0, quote.price - (stockPrice - quote.strike));
   const nv = Math.round((ve - Math.abs(quote.delta) - Math.abs(quote.gamma)) * 100) / 100;
-  const stop = stopPercent(position.sell_price, quote.tradingDays, Number(quote.gamma.toFixed(4)), nv, captured);
-  const level = captured <= -stop ? 'stop' : nv <= 0 ? 'nv' : 'normal';
-  return { level, captured, limit: position.sell_price * (1 + stop / 100), nv };
+  const level = nv <= 0 ? 'nv' : 'normal';
+  return { level, captured, limit, nv };
 }
 
 function marketOpen(now) {

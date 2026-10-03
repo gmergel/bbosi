@@ -5,7 +5,6 @@ import { IndicatorService } from './indicator.service';
 import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { calculateDynamicStopPercent } from '../utils/dynamic-stop';
 
 export interface SoldOption {
   id: string;
@@ -289,27 +288,8 @@ export class SoldOptionsService {
     return ((sold.sellPrice - currentPrice) / sold.sellPrice) * 100;
   }
 
-  /**
-   * Stop dinâmico com fórmula explícita:
-   *  - base: 25%
-   *  - gamma alta aperta o stop
-   *  - DTE curto aperta o stop
-   *  - NV negativo penaliza mais
-   *  - prazo mais longo permite um pouco mais de folga
-   *
-   * Fórmula resumida:
-   * stop = 25 - gammaAdj - dteAdj - nvAdj + timeAdj
-   * onde gammaAdj, dteAdj, nvAdj e timeAdj são ajustes de risco em pontos percentuais.
-   */
-  getStopPercent(sold: SoldOption): number {
-    const realized = this.getProfitCaptured(sold);
-    return calculateDynamicStopPercent(
-      sold.sellPrice,
-      sold.tradingDays ?? 0,
-      sold.gamma ?? 0,
-      sold.nv ?? 0,
-      realized
-    );
+  getStopPercent(_sold: SoldOption): number {
+    return 25;
   }
 
   /**
@@ -322,7 +302,7 @@ export class SoldOptionsService {
     const stopPrice = sold.sellPrice * (1 + stopPct / 100);
 
     if (sold.sellPrice > 0 && currentPrice >= stopPrice) {
-      return { shouldRoll: true, reason: `Stop dinâmico atingido (${stopPct.toFixed(0)}%) — recomprar agora`, severity: 'danger' };
+      return { shouldRoll: true, reason: `Stop fixo atingido (${stopPct.toFixed(0)}%) — recomprar agora`, severity: 'danger' };
     }
 
     // Regra 0: Opção em pó — recomprar e rolar para próxima série

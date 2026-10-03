@@ -2,7 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import worker from './worker.mjs';
-import { alertFor, checkPositionAlerts, stopPercent } from './telegram-alerts.mjs';
+import { alertFor, checkPositionAlerts, STOP_PERCENT } from './telegram-alerts.mjs';
 
 const originalFetch = globalThis.fetch;
 after(() => { globalThis.fetch = originalFetch; });
@@ -40,16 +40,32 @@ function database() {
 test('stop and profit follow the UI thresholds', () => {
   const position = { sell_price: 1 };
   const quote = { price: 1.4, strike: 35, delta: 0.2, gamma: 0.35, tradingDays: 3 };
-  assert.equal(stopPercent(10, 3, 0.35, -0.1, 0), 18);
+  assert.equal(STOP_PERCENT, 25);
   assert.equal(alertFor(position, quote, 30).level, 'stop');
   assert.equal(alertFor(position, { ...quote, price: 0.5 }, 30).level, 'profit');
   assert.equal(alertFor(position, { price: 0.5 }, NaN).level, 'profit');
   assert.equal(alertFor(position, { ...quote, price: 0.8 }, 30).level, 'normal');
   assert.deepEqual(alertFor(position, { ...quote, price: 0.8, delta: 0.7, gamma: 0.1 }, 30), {
-    level: 'nv', captured: 19.999999999999996, limit: 1.18, nv: 0,
+    level: 'nv', captured: 19.999999999999996, limit: 1.25, nv: 0,
   });
-  assert.equal(alertFor(position, { ...quote, gamma: NaN }, 30), null);
-  assert.equal(alertFor(position, { ...quote, strike: NaN }, 30), null);
+  assert.equal(alertFor(position, { ...quote, price: 1.2, gamma: NaN }, 30), null);
+  assert.equal(alertFor(position, { ...quote, price: 1.2, strike: NaN }, 30), null);
+});
+
+test('fixed stop starts at 125% of the sell price regardless of risk inputs', () => {
+  const position = { sell_price: 1 };
+  for (const risk of [
+    { strike: 35, delta: 0.2, gamma: 0.35, tradingDays: 3 },
+    { strike: 35, delta: 0.2, gamma: 0.08, tradingDays: 25 },
+  ]) {
+    assert.equal(alertFor(position, { ...risk, price: 1.249 }, 30).level, 'normal');
+    for (const price of [1.25, 1.251]) {
+      const alert = alertFor(position, { ...risk, price }, 30);
+      assert.equal(alert.level, 'stop');
+      assert.equal(alert.limit, 1.25);
+    }
+  }
+  assert.equal(alertFor(position, { price: 1.25 }, NaN).level, 'stop');
 });
 
 test('cron sends profit alert with an option quote from the current session when the stock quote is stale', async () => {
