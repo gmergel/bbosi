@@ -36,7 +36,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   isSyncTokenEditorOpen = signal<boolean>(false);
   syncTokenInput = signal<string>('');
   telegramOpen = signal(false);
-  telegramLinked = signal(false);
+  telegramLinked = signal<boolean | null>(null);
   telegramLink = signal('');
   telegramMessage = signal('');
   telegramBusy = signal(false);
@@ -51,6 +51,8 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   ));
 
   ngOnInit(): void {
+    if (this.soldOptionsService.hasSyncToken()) this.checkTelegramStatus();
+
     // Atualiza dados das opções vendidas
     this.refreshSoldData();
 
@@ -128,12 +130,18 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (!token) return;
     this.soldOptionsService.setSyncToken(token);
     this.cancelSyncToken();
+    this.telegramLinked.set(null);
+    this.telegramLink.set('');
+    this.stopTelegramPolling();
+    this.checkTelegramStatus();
   }
 
   unlinkSyncToken(): void {
     this.soldOptionsService.clearSyncToken();
     this.telegramOpen.set(false);
+    this.telegramLinked.set(null);
     this.telegramLink.set('');
+    this.telegramMessage.set('');
     this.stopTelegramPolling();
   }
 
@@ -148,8 +156,12 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   checkTelegramStatus(): void {
+    const token = this.soldOptionsService.getSyncToken();
+    if (!token) return;
+    this.telegramMessage.set('');
     this.http.get<{ linked: boolean }>(`${this.telegramUrl}/status`, { headers: this.telegramHeaders() }).subscribe({
       next: ({ linked }) => {
+        if (token !== this.soldOptionsService.getSyncToken()) return;
         this.telegramLinked.set(linked);
         if (linked) {
           this.telegramLink.set('');
@@ -157,7 +169,11 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
           this.stopTelegramPolling();
         }
       },
-      error: () => this.telegramMessage.set('Não foi possível consultar o vínculo. Verifique a sincronização.'),
+      error: () => {
+        if (token !== this.soldOptionsService.getSyncToken()) return;
+        this.telegramLinked.set(null);
+        this.telegramMessage.set('Não foi possível consultar o vínculo. Verifique a sincronização.');
+      },
     });
   }
 
