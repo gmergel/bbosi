@@ -49,6 +49,9 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   sortedActiveOptions = computed(() => [...this.soldOptionsService.activeOptions()].sort((a, b) =>
     a.stockTicker.localeCompare(b.stockTicker) || a.optionTicker.localeCompare(b.optionTicker)
   ));
+  sortedHistoryOptions = computed(() => [...this.soldOptionsService.soldOptions()]
+    .filter(option => option.buybackDate)
+    .sort((a, b) => Date.parse(b.buybackDate!) - Date.parse(a.buybackDate!)));
 
   ngOnInit(): void {
     if (this.soldOptionsService.hasSyncToken()) this.checkTelegramStatus();
