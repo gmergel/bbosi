@@ -58,7 +58,7 @@ NV = VE - (Delta + Gama)
 VDX = (NV / preço da opção) * 100
 VDXX = Lastro% * (NV / preço) * 50 * FatorTempo * DeltaScore
 BOSI = VE * percentual de negócios da opção
-GerBOSI = soma(Strike * BOSI) / soma(BOSI)
+GerBOSI = soma(Strike * VE * negócios reais) / soma(VE * negócios reais), por vencimento
 Taxa anualizada = (VE / preço da ação) * (252 / dias úteis) * 100
 ```
 
@@ -82,7 +82,7 @@ O filtro usa média de negócios dos últimos cinco pregões; o BOSI usa os neg�
 
 ## Monitoramento e saída
 
-O serviço de posições atualiza preço da ação, preço da opção, NV, VE, VDXX, GerBOSI e timestamp. Os sinais de saída consideram alvo de 50% do prêmio capturado, proximidade do vencimento, risco de gamma, pressão do GerBOSI, NV negativo e stop fixo de 25% sobre o prêmio vendido.
+O serviço de posições atualiza preço da ação, preço da opção, NV, VE, VDXX, GerBOSI do mesmo vencimento e timestamp. O GerBOSI usa negócios reais da opcoes.net.br e não indica o lado agressor. Os sinais de saída consideram alvo de 50% do prêmio capturado, proximidade do vencimento, risco de gamma, proximidade do centro de strikes, NV negativo e stop fixo de 25% sobre o prêmio vendido.
 
 O alvo de recompra é 50% do prêmio vendido. O stop de recompra é fixo em 25%: é atingido quando a cotação da opção chega a 125% do preço de venda. Gamma, DTE, NV e lucro capturado não alteram esse limite. A interface mostra o valor monetário e o percentual do stop; o serviço de posições e o monitor do Telegram aplicam a mesma regra. Quando o NV fica negativo, o sistema apresenta um sinal de perigo independente e sugere considerar a recompra. O sistema não executa ordens nem garante execução no preço sinalizado.
 

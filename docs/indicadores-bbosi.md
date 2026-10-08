@@ -119,14 +119,14 @@ VDXX = Lastro% × (NV / Cotação) × 50 × FatorTempo × DeltaScore
 
 ### 5. BOSI (Germano Options Strength Index)
 
-Indica onde está a **força do mercado de opções**:
+Indica atividade relativa por opção; não identifica o lado agressor das negociações:
 
 ```
 BOSI = VE × %NumNeg
 ```
 
 - `%NumNeg` = negócios da opção / total de negócios da série × 100
-- Uso: referência de pressão compradora — quando BOSI da vendida sobe, considerar fechar
+- O número de negócios não distingue compras de vendas iniciadas no mercado
 
 ---
 
@@ -138,7 +138,7 @@ BOSI = VE × %NumNeg
 GerBOSI = Σ(Strike_i × BOSI_i) / Σ(BOSI_i)
 ```
 
-Representa o **“centro de massa”** do mercado de opções. Usado como referência de limite de recompra: quando o GerBOSI se aproxima do preço da ação, a pressão compradora está perto — hora de agir.
+Representa o centro ponderado das calls de um vencimento, calculado com negócios reais da opcoes.net.br. A interface permite selecionar o vencimento e exibe fonte e referência no tooltip. Sem negócios reais com VE positivo, o valor fica indisponível em vez de aparecer como zero. Proximidade do strike é apenas um sinal de acompanhamento, não uma indicação de pressão compradora ou ordem de recompra.
 
 ---
 
@@ -261,7 +261,7 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 | 1 | Alvo atingido | % Capturado ≥ 50% E DTE > 5 | 🟢 Info | Fechar com lucro |
 | 2 | Prêmio esgotado | DTE ≤ 7 E % Capturado ≥ 75% | 🟢 Info | Rolar para próximo vencimento |
 | 3 | Gamma Risk | DTE ≤ 5 E % Capturado < 50% | 🔴 Danger | Fechar imediatamente |
-| 4 | Pressão do GerBOSI | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Rolar ou fechar |
+| 4 | Centro de strikes próximo | (Strike - GerBOSI)/Strike < 3% | 🟡 Warn | Acompanhar posição |
 | 5 | NV negativo | NV < 0 | 🔴 Danger | Recomprar |
 
 **Stop fixo operacional:** quando o preço da opção é maior ou igual a 125% do preço de venda, o app apresenta um sinal de perigo e o monitor do Telegram pode enviar um alerta de stop. Esse sinal tem prioridade sobre os demais sinais de saída. Gamma, DTE e NV não ajustam o percentual de 25%.
@@ -322,13 +322,13 @@ Sistema de 5 regras que determinam automaticamente quando agir sobre uma posiç�
 │    • Preço da opção atualiza live                       │
 │    • Barra de lucro % avança                            │
 │    • NV recalcula continuamente                         │
-│    • GerBOSI monitora pressão compradora                  │
+│    • GerBOSI mostra o centro ponderado por vencimento    │
 │    • Roll Signals avaliam 5 regras a cada refresh       │
 ├─────────────────────────────────────────────────────────┤
 │ 3. SAÍDA (disparada por Roll Signal)                    │
 │    • 🟢 Alvo 50% → fechar, reabrir nova se VDXX bom   │
 │    • 🟢 Prêmio esgotado → rolar para próximo vcto     │
-│    • 🟡 GerBOSI próximo → rolar ou reduzir               │
+│    • 🟡 Centro de strikes próximo → acompanhar           │
 │    • 🔴 Gamma Risk → fechar imediatamente              │
 │    • 🔴 NV negativo → recomprar                        │
 │    • Remover card → operação encerrada                  │

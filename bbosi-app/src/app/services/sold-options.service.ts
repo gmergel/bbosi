@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { OptionIndicators } from '../models/stock.model';
+import { GerBosiSnapshot, OptionIndicators } from '../models/stock.model';
 import { MarketDataService } from './market-data.service';
 import { IndicatorService } from './indicator.service';
 import { Observable, catchError, finalize, forkJoin, map, of } from 'rxjs';
@@ -20,6 +20,9 @@ export interface SoldOption {
   vdxx: number;
   lastroPercent: number;
   bbosi: number;
+  bbosiValid?: boolean;
+  bbosiTrades?: number;
+  bbosiMarketDataTime?: string;
   stockPrice: number;
   optionPrice: number;
   delta?: number;
@@ -54,6 +57,9 @@ export function mergeRemoteSoldOptions(remote: SoldOption[], current: SoldOption
       vdxx: currentOption.vdxx,
       lastroPercent: currentOption.lastroPercent,
       bbosi: currentOption.bbosi,
+      bbosiValid: currentOption.bbosiValid,
+      bbosiTrades: currentOption.bbosiTrades,
+      bbosiMarketDataTime: currentOption.bbosiMarketDataTime,
       stockPrice: currentOption.stockPrice,
       optionPrice: currentOption.optionPrice,
       delta: currentOption.delta,
@@ -85,7 +91,7 @@ export class SoldOptionsService {
     void this.loadFromRemote();
   }
 
-  sell(option: OptionIndicators, stockTicker: string, bbosi: number, stockPrice: number, sellPrice = option.price): void {
+  sell(option: OptionIndicators, stockTicker: string, bbosiSnapshot: GerBosiSnapshot | undefined, stockPrice: number, sellPrice = option.price): void {
     const sold: SoldOption = {
       id: globalThis.crypto.randomUUID(),
       optionTicker: option.ticker,
@@ -99,7 +105,10 @@ export class SoldOptionsService {
       ve: option.ve,
       vdxx: option.vdxx,
       lastroPercent: option.lastroPercent,
-      bbosi,
+      bbosi: bbosiSnapshot?.value ?? 0,
+      bbosiValid: bbosiSnapshot?.value !== null && bbosiSnapshot !== undefined,
+      bbosiTrades: bbosiSnapshot?.trades ?? 0,
+      bbosiMarketDataTime: bbosiSnapshot?.marketDataTime ?? undefined,
       stockPrice,
       optionPrice: option.price,
       delta: option.delta,
@@ -215,10 +224,18 @@ export class SoldOptionsService {
             result.stock.price,
             result.ticker
           );
-          const bbosi = this.indicatorService.calculateBBOSI(indicators);
+          const gerbosiSnapshots = this.indicatorService.calculateGerBosiByExpiration(
+            result.gerbosiOptions,
+            result.stock.price
+          );
 
           updated = updated.map(s => {
             if (s.stockTicker !== result.ticker) return s;
+
+            const expirationKey = s.expiration.toISOString().slice(0, 10);
+            const gerbosi = gerbosiSnapshots.find(snapshot =>
+              snapshot.expiration.toISOString().slice(0, 10) === expirationKey
+            );
 
             // Busca indicadores da opção vendida específica
             const optInd = indicators.find(i => i.ticker === s.optionTicker);
@@ -228,7 +245,10 @@ export class SoldOptionsService {
             return {
               ...s,
               stockPrice: result.stock.price,
-              bbosi,
+              bbosi: gerbosi?.value ?? 0,
+              bbosiValid: gerbosi?.value !== null && gerbosi !== undefined,
+              bbosiTrades: gerbosi?.trades ?? 0,
+              bbosiMarketDataTime: gerbosi?.marketDataTime ?? undefined,
               nv: optInd ? optInd.nv : rawOpt
                 ? Math.round(((rawOpt.strike >= result.stock.price ? rawOpt.price : Math.max(0, rawOpt.price - (result.stock.price - rawOpt.strike))) - Math.abs(rawOpt.delta) - Math.abs(rawOpt.gamma)) * 100) / 100
                 : s.nv,
@@ -326,10 +346,10 @@ export class SoldOptionsService {
     }
 
     // Regra 4: GerBOSI se aproximou do strike (lastro GerBOSI < 3%)
-    if (sold.bbosi > 0 && sold.strike > 0) {
+    if (sold.bbosiValid && sold.bbosi > 0 && sold.strike > 0) {
       const bbosiLastro = ((sold.strike - sold.bbosi) / sold.strike) * 100;
       if (bbosiLastro < 3 && bbosiLastro > -5) {
-        return { shouldRoll: true, reason: 'GerBOSI próximo do strike — pressão compradora', severity: 'warn' };
+        return { shouldRoll: true, reason: 'Centro de strikes próximo do strike — acompanhar posição', severity: 'warn' };
       }
     }
 

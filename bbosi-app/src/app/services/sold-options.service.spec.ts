@@ -15,6 +15,8 @@ const createSoldOption = (overrides: Partial<SoldOption> = {}): SoldOption => ({
   vdxx: 1.5,
   lastroPercent: 16.06,
   bbosi: 47.02,
+  bbosiValid: true,
+  bbosiTrades: 80,
   stockPrice: 48.56,
   optionPrice: 0.21,
   gamma: 0.03,
@@ -52,6 +54,35 @@ describe('SoldOptionsService stop logic', () => {
       expect(signal.reason).toContain('Stop fixo atingido (25%)');
       expect(signal.severity).toBe('danger');
     }
+  });
+
+  it('does not use an invalid legacy GerBOSI to trigger a proximity alert', () => {
+    const signal = SoldOptionsService.prototype.getRollSignal(createSoldOption({
+      strike: 56.36,
+      bbosi: 56.2,
+      bbosiValid: false,
+      tradingDays: 14,
+      sellPrice: 1,
+      optionPrice: 1,
+      nv: 0.1,
+    }));
+
+    expect(signal.shouldRoll).toBe(false);
+  });
+
+  it('describes a valid GerBOSI proximity signal without claiming buyer pressure', () => {
+    const signal = SoldOptionsService.prototype.getRollSignal(createSoldOption({
+      strike: 56.36,
+      bbosi: 56.2,
+      bbosiValid: true,
+      tradingDays: 14,
+      sellPrice: 1,
+      optionPrice: 1,
+      nv: 0.1,
+    }));
+
+    expect(signal.reason).toContain('Centro de strikes próximo');
+    expect(signal.reason).not.toContain('pressão compradora');
   });
 });
 

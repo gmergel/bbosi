@@ -16,7 +16,7 @@ const MAX_DAYS = 5;
  * Armazena histórico de negócios por opção (últimos 5 pregões)
  * para calcular média móvel de liquidez.
  *
- * - BOSI/GerBOSI continuam usando trades do dia
+ * - BOSI usa os negócios do dia; GerBOSI exige negócios reais da opcoes.net.br
  * - A média é usada apenas no FILTRO de liquidez mínima
  */
 @Injectable({ providedIn: 'root' })

@@ -19,8 +19,22 @@
         <span class="metric-value">R$ {{ stock()?.price?.toFixed(2) }}</span>
       </div>
       <div class="metric metric--highlight">
-        <span class="metric-label">GerBOSI</span>
-        <span class="metric-value">R$ {{ bbosi().toFixed(2) }}</span>
+        <span class="metric-label metric-label--with-info">
+          Centro GerBOSI
+          <mat-icon matTooltip="Centro ponderado dos strikes das calls por vencimento; negócios não indicam o lado agressor." aria-label="Informações do GerBOSI">info_outline</mat-icon>
+        </span>
+        <div class="gerbosi-values">
+          @for (snapshot of gerbosiValues(); track snapshot.expiration.toISOString()) {
+            <span class="gerbosi-value"
+                  [class.gerbosi-value--unavailable]="snapshot.value === null"
+                  [matTooltip]="getGerbosiTooltip(snapshot)">
+              <span>{{ snapshot.value === null ? '—' : 'R$ ' + snapshot.value.toFixed(2) }}</span>
+              <span class="gerbosi-value__term">- {{ snapshot.tradingDays }}d</span>
+            </span>
+          } @empty {
+            <span class="metric-value metric-value--unavailable">—</span>
+          }
+        </div>
       </div>
     </div>
   </header>

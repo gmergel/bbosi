@@ -301,7 +301,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   private getBarFillBounds(sold: SoldOption): { left: number; width: number } {
     const bbosi = sold.bbosi || 0;
-    if (!bbosi) {
+    if (!sold.bbosiValid || !bbosi) {
       return { left: this.getMarkerPosition(sold.stockPrice, sold), width: 0 };
     }
     const left = Math.min(sold.stockPrice, bbosi);
@@ -330,7 +330,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
   }
 
   getBarLastro(sold: SoldOption): number {
-    if (!sold.bbosi || sold.strike === 0) return 100;
+    if (!sold.bbosiValid || !sold.bbosi || sold.strike === 0) return 100;
     return ((sold.strike - sold.bbosi) / sold.strike) * 100;
   }
 
@@ -355,7 +355,7 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
     if (price <= 0) return 50;
 
     // Preço da ação sempre centralizado (50%). Escala simétrica baseada na maior distância.
-    const bbosi = sold.bbosi || price;
+    const bbosi = sold.bbosiValid ? sold.bbosi : price;
     const maxDist = Math.max(
       Math.abs(sold.strike - price),
       Math.abs(bbosi - price),
@@ -367,11 +367,21 @@ export class StockSelectionComponent implements OnInit, OnDestroy {
 
   getBarLabels(sold: SoldOption): { label: string; value: number; type: string }[] {
     const items = [
-      { label: `GerBOSI ${(sold.bbosi || 0).toFixed(2)}`, value: sold.bbosi || 0, type: 'bbosi' },
       { label: `Ação ${sold.stockPrice.toFixed(2)}`, value: sold.stockPrice, type: 'price' },
       { label: `Strike ${sold.strike.toFixed(2)}`, value: sold.strike, type: 'strike' },
     ];
+    if (sold.bbosiValid && sold.bbosi > 0) {
+      items.push({ label: `GerBOSI ${sold.bbosi.toFixed(2)}`, value: sold.bbosi, type: 'bbosi' });
+    }
     return items.sort((a, b) => a.value - b.value);
+  }
+
+  getGerbosiTooltip(sold: SoldOption): string {
+    if (!sold.bbosiValid || sold.bbosi <= 0) return 'Centro GerBOSI indisponível para este vencimento';
+    const reference = sold.bbosiMarketDataTime
+      ? new Date(sold.bbosiMarketDataTime).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+      : 'data não informada';
+    return `Centro ponderado das calls · opcoes.net.br · ${reference} · ${sold.bbosiTrades ?? 0} negócios`;
   }
 
   getTarget(sold: SoldOption): number {

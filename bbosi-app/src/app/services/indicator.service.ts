@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { OptionIndicators } from '../models/stock.model';
+import { GerBosiSnapshot, OptionIndicators } from '../models/stock.model';
 import { OptionWithGreeks } from './market-data.service';
 import { LiquidityHistoryService } from './liquidity-history.service';
 import { IvHistoryService } from './iv-history.service';
@@ -190,13 +190,59 @@ export class IndicatorService {
     return { noSell: false, noSellReason: '' };
   }
 
-  calculateBBOSI(indicators: OptionIndicators[]): number {
-    // GerBOSI usa TODAS as opções com BOSI > 0 (mede força do mercado, não filtra por vendabilidade)
-    const validOptions = indicators.filter(o => o.bosi > 0);
-    const sumStrikeBosi = validOptions.reduce((sum, o) => sum + o.strike * o.bosi, 0);
-    const sumBosi = validOptions.reduce((sum, o) => sum + o.bosi, 0);
-    if (sumBosi === 0) return 0;
-    return Math.round((sumStrikeBosi / sumBosi) * 100) / 100;
+  calculateGerBosiByExpiration(
+    options: OptionWithGreeks[],
+    stockPrice: number,
+    displayedExpirations: Array<Pick<OptionWithGreeks, 'expiration' | 'tradingDays'>> = options
+  ): GerBosiSnapshot[] {
+    const groups = new Map<string, {
+      expiration: Date;
+      tradingDays: number;
+      totalTrades: number;
+      weightedStrike: number;
+      totalWeight: number;
+      marketDataTime: string | null;
+    }>();
+
+    for (const option of displayedExpirations) {
+      const key = option.expiration.toISOString().slice(0, 10);
+      if (groups.has(key)) continue;
+      groups.set(key, {
+        expiration: option.expiration,
+        tradingDays: option.tradingDays,
+        totalTrades: 0,
+        weightedStrike: 0,
+        totalWeight: 0,
+        marketDataTime: null,
+      });
+    }
+
+    for (const option of options) {
+      const key = option.expiration.toISOString().slice(0, 10);
+      const group = groups.get(key);
+      if (!group) continue;
+      if (option.tradesAreReal !== true || option.trades <= 0) continue;
+
+      group.totalTrades += option.trades;
+      const ve = this.calcVE(option.price, stockPrice, option.strike);
+      const weight = ve * option.trades;
+      group.weightedStrike += option.strike * weight;
+      group.totalWeight += weight;
+
+      if (option.marketDataTime && (!group.marketDataTime || option.marketDataTime > group.marketDataTime)) {
+        group.marketDataTime = option.marketDataTime;
+      }
+    }
+
+    return [...groups.values()].map(group => ({
+      expiration: group.expiration,
+      tradingDays: group.tradingDays,
+      value: group.totalWeight > 0
+        ? Math.round((group.weightedStrike / group.totalWeight) * 100) / 100
+        : null,
+      trades: group.totalTrades,
+      marketDataTime: group.marketDataTime,
+    }));
   }
 
   private calcVE(optionPrice: number, stockPrice: number, strike: number): number {

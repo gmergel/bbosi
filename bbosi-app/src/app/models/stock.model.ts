@@ -14,7 +14,16 @@ export interface OptionData {
   trades: number;         // Número de negócios
   volume: number;         // Volume financeiro (R$)
   tradePercent: number;
+  tradesAreReal?: boolean;
   marketDataTime?: string | null; // Data/hora de referência informada pela fonte
+}
+
+export interface GerBosiSnapshot {
+  expiration: Date;
+  tradingDays: number;
+  value: number | null;
+  trades: number;
+  marketDataTime: string | null;
 }
 
 export interface OptionIndicators extends OptionData {

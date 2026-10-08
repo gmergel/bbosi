@@ -12,7 +12,7 @@ import { DatePipe } from '@angular/common';
 import { MarketDataService } from '../../services/market-data.service';
 import { IndicatorService, VolRegime } from '../../services/indicator.service';
 import { SoldOptionsService } from '../../services/sold-options.service';
-import { Stock, OptionIndicators } from '../../models/stock.model';
+import { GerBosiSnapshot, Stock, OptionIndicators } from '../../models/stock.model';
 
 type OptionsDataState = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -42,7 +42,7 @@ export class OptionsListComponent implements OnInit {
 
   stock = signal<Stock | undefined>(undefined);
   allOptions = signal<OptionIndicators[]>([]);
-  bbosi = signal<number>(0);
+  gerbosiSnapshots = signal<GerBosiSnapshot[]>([]);
   loading = signal<boolean>(true);
   dataState = signal<OptionsDataState>('loading');
   loadError = signal<string>('');
@@ -57,6 +57,10 @@ export class OptionsListComponent implements OnInit {
   ivCurrent = signal<number>(0);
   ivDays = signal<number>(0);
   searchQuery = signal<string>('');
+
+  gerbosiValues = computed(() =>
+    [...this.gerbosiSnapshots()].sort((a, b) => a.tradingDays - b.tradingDays).slice(0, 4)
+  );
 
   /** Opções filtradas e ordenadas por VDXX decrescente */
   options = computed(() => {
@@ -106,17 +110,22 @@ export class OptionsListComponent implements OnInit {
     this.loadError.set('');
 
     this.marketData.fetchAll(this.selectedTicker).subscribe({
-      next: ({ stock, options, timestamp }) => {
+      next: ({ stock, options, gerbosiOptions, timestamp }) => {
         this.stock.set(stock);
         this.lastUpdated.set(timestamp);
 
         this.allOptions.set([]);
-        this.bbosi.set(0);
+        this.gerbosiSnapshots.set([]);
 
         if (options.length > 0) {
           const indicators = this.indicatorService.calculateFromApi(options, stock.price, this.selectedTicker);
           this.allOptions.set(indicators);
-          this.bbosi.set(this.indicatorService.calculateBBOSI(indicators));
+          const snapshots = this.indicatorService.calculateGerBosiByExpiration(
+            gerbosiOptions,
+            stock.price,
+            options
+          );
+          this.gerbosiSnapshots.set(snapshots);
 
           // Vol regime e IV Rank
           this.volRegime.set(this.indicatorService.getVolRegime(options, this.selectedTicker));
@@ -137,6 +146,7 @@ export class OptionsListComponent implements OnInit {
         this.loading.set(false);
         this.dataState.set('error');
         this.loadError.set(error?.message || 'Não foi possível obter dados reais. Verifique sua conexão ou tente novamente.');
+        this.gerbosiSnapshots.set([]);
       },
     });
   }
@@ -179,6 +189,23 @@ export class OptionsListComponent implements OnInit {
     return move > 0 ? 'subir' : move < 0 ? 'descer' : 'manter';
   }
 
+  getGerbosiTooltip(snapshot: GerBosiSnapshot): string {
+    const expiration = snapshot.expiration.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+    const reference = snapshot.marketDataTime
+      ? new Date(snapshot.marketDataTime).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+      : 'data não informada';
+    return `Vencimento ${expiration} · opcoes.net.br · referência ${reference} · ${snapshot.trades} negócios reais. Centro ponderado, sem indicação de direção compradora ou vendedora.`;
+  }
+
+  getGerbosiForExpiration(expiration: Date): GerBosiSnapshot | undefined {
+    const key = this.expirationKey(expiration);
+    return this.gerbosiSnapshots().find(snapshot => this.expirationKey(snapshot.expiration) === key);
+  }
+
+  private expirationKey(expiration: Date): string {
+    return expiration.toISOString().slice(0, 10);
+  }
+
   isSold(optionTicker: string): boolean {
     return this.soldOptionsService.isSold(optionTicker);
   }
@@ -200,7 +227,13 @@ export class OptionsListComponent implements OnInit {
     if (!Number.isFinite(sellPrice) || sellPrice <= 0) return;
 
     const ticker = this.route.snapshot.paramMap.get('ticker') || '';
-    this.soldOptionsService.sell(option, ticker, this.bbosi(), this.stock()?.price || 0, sellPrice);
+    this.soldOptionsService.sell(
+      option,
+      ticker,
+      this.getGerbosiForExpiration(option.expiration),
+      this.stock()?.price || 0,
+      sellPrice
+    );
     this.cancelSell();
   }
 

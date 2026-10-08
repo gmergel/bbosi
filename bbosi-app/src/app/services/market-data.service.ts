@@ -157,12 +157,19 @@ export class MarketDataService {
    * Consulta as duas fontes e usa a que tiver a referência mais recente.
    */
   fetchOptions(ticker: string): Observable<OptionWithGreeks[]> {
+    return this.fetchOptionSources(ticker).pipe(
+      map(({ opcoes, vendaCoberta }) => this.selectMostRecentOptions(opcoes, vendaCoberta))
+    );
+  }
+
+  private fetchOptionSources(ticker: string): Observable<{
+    opcoes: OptionWithGreeks[];
+    vendaCoberta: OptionWithGreeks[];
+  }> {
     return forkJoin({
       opcoes: this.fetchOptionsOpcoes(ticker),
       vendaCoberta: this.fetchOptionsVendaCoberta(ticker),
-    }).pipe(
-      map(({ opcoes, vendaCoberta }) => this.selectMostRecentOptions(opcoes, vendaCoberta))
-    );
+    });
   }
 
   private selectMostRecentOptions(
@@ -226,7 +233,12 @@ export class MarketDataService {
   /**
     * Busca cotação + opções em paralelo (fonte principal de opções: opcoes.net.br)
    */
-  fetchAll(ticker: string): Observable<{ stock: Stock; options: OptionWithGreeks[]; timestamp: Date }> {
+  fetchAll(ticker: string): Observable<{
+    stock: Stock;
+    options: OptionWithGreeks[];
+    gerbosiOptions: OptionWithGreeks[];
+    timestamp: Date;
+  }> {
     const stock = this.stocks.find(s => s.ticker === ticker) || {
       ticker,
       name: ticker,
@@ -235,9 +247,10 @@ export class MarketDataService {
 
     return forkJoin({
       priceData: this.fetchStockPrice(ticker),
-      options: this.fetchOptions(ticker),
+      optionSources: this.fetchOptionSources(ticker),
     }).pipe(
-      switchMap(({ priceData, options }) => {
+      switchMap(({ priceData, optionSources }) => {
+        const options = this.selectMostRecentOptions(optionSources.opcoes, optionSources.vendaCoberta);
         const price = priceData.price;
         const timestamp = priceData.marketTime || new Date();
 
@@ -248,6 +261,7 @@ export class MarketDataService {
         return of({
           stock: { ...stock, price },
           options,
+          gerbosiOptions: optionSources.opcoes,
           timestamp,
         });
       })
@@ -353,6 +367,7 @@ export class MarketDataService {
         tradingDays,
         price: opt.optionPremium,
         trades: 100, // vendacoberta pré-filtra opções líquidas; sem dado de negócios
+        tradesAreReal: false,
         volume: 0,
         tradePercent: 0,
         impliedVol,
@@ -437,6 +452,7 @@ export class MarketDataService {
       tradingDays,
       price,
       trades,
+      tradesAreReal: true,
       volume,
       tradePercent: 0,
       impliedVol: this.parseNumber(row[17]),
