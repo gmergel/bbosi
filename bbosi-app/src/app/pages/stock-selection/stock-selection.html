@@ -93,7 +93,7 @@
                     </div>
                      }
                   <div class="bar-scale__marker bar-scale__marker--strike"
-                       style="left: 100%"
+                       [style.left.%]="getMarkerPosition(sold.strike, sold)"
                        matTooltip="Strike R${{ sold.strike.toFixed(2) }}">
                   </div>
                   <span class="bar-scale__distance"

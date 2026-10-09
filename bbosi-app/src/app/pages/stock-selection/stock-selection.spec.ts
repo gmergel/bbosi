@@ -38,6 +38,10 @@ describe('StockSelectionComponent Telegram status', () => {
             activeOptions: () => [],
             refreshRemote: () => of(void 0),
             refreshAll: () => of(void 0),
+            getNvColor: () => '#ffffff',
+            getStopPercent: () => 25,
+            getProfitCaptured: () => 0,
+            getRollSignal: () => ({ shouldRoll: false, severity: 'info', reason: '' }),
           },
         },
       ],
@@ -53,6 +57,38 @@ describe('StockSelectionComponent Telegram status', () => {
 
   it('shows closed operations from newest to oldest', () => {
     expect(component.sortedHistoryOptions().map(option => option.optionTicker)).toEqual(['NEW', 'OLD']);
+  });
+
+  it.each([
+    { strike: 49.03, expectedPosition: 5 },
+    { strike: 52.17, expectedPosition: 95 },
+    { strike: 50.60, expectedPosition: 50 },
+  ])('renders strike $strike on the shared price scale', ({ strike, expectedPosition }) => {
+    token = null;
+    const sold: SoldOption = {
+      ...historyOptions[0],
+      optionTicker: 'ITUBJ49',
+      stockTicker: 'ITUB4',
+      buybackDate: undefined,
+      strike,
+      stockPrice: 50.60,
+      bbosi: 50.86,
+      bbosiValid: true,
+    };
+    vi.spyOn(TestBed.inject(SoldOptionsService), 'activeOptions').mockReturnValue([sold]);
+    const fixture = TestBed.createComponent(StockSelectionComponent);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const strikeMarker = element.querySelector<HTMLElement>('.bar-scale__marker--strike')!;
+    const priceMarker = element.querySelector<HTMLElement>('.bar-scale__marker--price')!;
+    const bbosiMarker = element.querySelector<HTMLElement>('.bar-scale__marker--bbosi')!;
+    expect(parseFloat(strikeMarker.style.left)).toBeCloseTo(expectedPosition);
+    expect(parseFloat(priceMarker.style.left)).toBe(50);
+    expect(parseFloat(bbosiMarker.style.left)).toBeCloseTo(
+      fixture.componentInstance.getMarkerPosition(sold.bbosi, sold)
+    );
+    fixture.destroy();
   });
 
   it('restores an existing link on startup without opening the panel', () => {
