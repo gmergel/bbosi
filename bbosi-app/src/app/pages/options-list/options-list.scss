@@ -60,7 +60,7 @@
 
 .timestamp {
   text-align: right;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   color: var(--mat-sys-on-surface-variant);
   margin-bottom: 12px;
   opacity: 0.7;
@@ -680,14 +680,43 @@
   .header-company { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .header-metrics {
     grid-column: 1 / -1;
-    justify-content: space-between;
-    flex-direction: row;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
     min-width: 0;
   }
-  .metric--highlight { min-width: 0; }
-  .gerbosi-expiration { gap: 3px; }
-  .gerbosi-expiration select { max-width: 120px; }
+  .header-metrics > .metric:first-child {
+    grid-area: 1 / 1 / span 2;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .metric--highlight { display: contents; }
+  .metric-label--with-info {
+    grid-area: 1 / 2;
+  }
+  .metric--highlight .metric-value {
+    grid-area: 2 / 2;
+    justify-self: end;
+  }
+  .gerbosi-expiration {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding-top: 8px;
+    font-size: 0.75rem;
+  }
+  .gerbosi-expiration select {
+    min-width: 0;
+    max-width: none;
+    min-height: 42px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    background: #14212c;
+    color: var(--mat-sys-on-surface);
+    font-size: 0.8rem;
+  }
   .option-row__metrics { display: none; }
   .option-row__vdxx { width: 80px; }
   .best-pick__details { gap: 8px; font-size: 0.8rem; }
