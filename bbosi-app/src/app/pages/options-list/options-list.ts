@@ -43,6 +43,7 @@ export class OptionsListComponent implements OnInit {
   stock = signal<Stock | undefined>(undefined);
   allOptions = signal<OptionIndicators[]>([]);
   gerbosiSnapshots = signal<GerBosiSnapshot[]>([]);
+  selectedGerbosiExpiration = signal<string | null>(null);
   loading = signal<boolean>(true);
   dataState = signal<OptionsDataState>('loading');
   loadError = signal<string>('');
@@ -59,8 +60,14 @@ export class OptionsListComponent implements OnInit {
   searchQuery = signal<string>('');
 
   gerbosiValues = computed(() =>
-    [...this.gerbosiSnapshots()].sort((a, b) => a.tradingDays - b.tradingDays).slice(0, 4)
+    [...this.gerbosiSnapshots()].sort((a, b) => a.tradingDays - b.tradingDays)
   );
+
+  selectedGerbosi = computed(() => {
+    const values = this.gerbosiValues();
+    const selectedExpiration = this.selectedGerbosiExpiration();
+    return values.find(snapshot => this.expirationKey(snapshot.expiration) === selectedExpiration) ?? values[0];
+  });
 
   /** Opções filtradas e ordenadas por VDXX decrescente */
   options = computed(() => {
@@ -200,6 +207,11 @@ export class OptionsListComponent implements OnInit {
   getGerbosiForExpiration(expiration: Date): GerBosiSnapshot | undefined {
     const key = this.expirationKey(expiration);
     return this.gerbosiSnapshots().find(snapshot => this.expirationKey(snapshot.expiration) === key);
+  }
+
+  selectGerbosiExpiration(event: Event): void {
+    const expiration = (event.target as HTMLSelectElement).value;
+    this.selectedGerbosiExpiration.set(expiration || null);
   }
 
   private expirationKey(expiration: Date): string {

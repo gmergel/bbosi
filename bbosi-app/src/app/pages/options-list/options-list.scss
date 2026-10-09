@@ -223,33 +223,23 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.gerbosi-values {
-  display: grid;
-  gap: 2px;
-  margin-top: 2px;
-}
-
-.gerbosi-value {
-  display: grid;
-  grid-template-columns: 76px 34px;
-  gap: 6px;
-  white-space: nowrap;
-  font-size: 0.72rem;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.gerbosi-value > span:first-child {
-  text-align: right;
-}
-
-.gerbosi-value__term {
-  text-align: left;
-}
-
-.gerbosi-value--unavailable,
-.gerbosi-value__term {
+.gerbosi-expiration {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--mat-sys-on-surface-variant);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.gerbosi-expiration select {
+  max-width: 142px;
+  border: 0;
+  padding: 2px 18px 2px 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
 }
 
 .metric--highlight .metric-value {
@@ -696,7 +686,8 @@
     min-width: 0;
   }
   .metric--highlight { min-width: 0; }
-  .gerbosi-values { max-width: 132px; }
+  .gerbosi-expiration { gap: 3px; }
+  .gerbosi-expiration select { max-width: 120px; }
   .option-row__metrics { display: none; }
   .option-row__vdxx { width: 80px; }
   .best-pick__details { gap: 8px; font-size: 0.8rem; }
