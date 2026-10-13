@@ -97,7 +97,6 @@
                        matTooltip="Strike R${{ sold.strike.toFixed(2) }}">
                   </div>
                   <span class="bar-scale__distance"
-                    [style.left.%]="getStrikeDistanceLabelPosition(sold)"
                     [class.bar-scale__distance--below]="getCurrentStrikeDistance(sold) < 0"
                     [matTooltip]="'Distância total até o strike: ' + getCurrentStrikeDistance(sold).toFixed(2) + '%. Ritmo composto necessário: ' + getDailyStrikeMove(sold).toFixed(2) + '% ao dia'">
                     {{ getCurrentStrikeDistance(sold).toFixed(2) }}% · {{ getDailyStrikeMove(sold).toFixed(2) }}%/dia
